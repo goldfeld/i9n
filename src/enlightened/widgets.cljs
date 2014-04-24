@@ -50,32 +50,41 @@
        (switch-active-view view)
        list)))
 
-(defn ^:private create-menu [menu-item action-dispatch hierarchy]
-  (let [[title options] menu-item]
-    (list-view title (take-nth 2 options)
-               (fn [i items]
-                 (let [selection (nth options (* 2 i))
-                       action (nth options (inc (* 2 i)))]
-                   (condp apply [action]
-                     keyword? (create-menu (action hierarchy)
-                                           action-dispatch
-                                           (assoc-in hierarchy
-                                                     [:parents selection]
-                                                     menu-item))
-                     (action-dispatch action)))))))
+(defn create-menu
+  ([menu-item hierarchy]
+     (create-menu menu-item hierarchy identity []))
+  ([menu-item hierarchy action-dispatch]
+     (create-menu menu-item hierarchy action-dispatch []))
+  ([menu-item hierarchy action-dispatch widget-hooks]
+     (let [[title options] menu-item
+           menu (list-view title (take-nth 2 options)
+                           (fn [i items]
+                             (let [selection (nth options (* 2 i))
+                                   action (nth options (inc (* 2 i)))]
+                               (condp apply [action]
+                                 keyword? (create-menu (action hierarchy)
+                                                       (assoc-in
+                                                        hierarchy
+                                                        [:parents selection]
+                                                        menu-item)
+                                                       action-dispatch
+                                                       widget-hooks)
+                                 (action-dispatch action)))))]
+       (doseq [hook widget-hooks] (hook menu))
+       menu)))
 
-(defn ^:private create-menu-hierarchy [root-item menu-items]
+(defn create-menu-hierarchy [root-item menu-items]
   (let [hierarchy {:root root-item}]
     (reduce (fn [coll x] (conj coll [(keyword (first x)) (rest x)]))
             hierarchy menu-items)))
 
-(defn menu-view
-  ([menu-items] (menu-view menu-items identity))
-  ([menu-items action-dispatch]
-     (let [{menu :xs
-            root :x} (group-by #(if (= 2 (count %)) :x :xs) menu-items)]
-       (create-menu (first root) action-dispatch
-                    (create-menu-hierarchy root menu)))))
+(defn menu-view [menu-items action-dispatch widget-hooks]
+  (let [{menu :xs
+         root :x} (group-by #(if (= 2 (count %)) :x :xs) menu-items)]
+    (create-menu (first root)
+                 (create-menu-hierarchy root menu)
+                 action-dispatch
+                 widget-hooks)))
 
 (def ^:private create-args
   {:list [create-list
