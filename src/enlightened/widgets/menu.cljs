@@ -1,4 +1,5 @@
-(ns enlightened.widgets.menu)
+(ns enlightened.widgets.menu
+  (:require [enlightened.core :refer [render]]))
 
 (defn create-menu-hierarchy [root-item menu-items]
   (let [hierarchy {:root root-item}]
@@ -17,19 +18,24 @@
                              (let [action (nth options (inc (* 2 i)))
                                    next (action hierarchy)
                                    hrchy (assoc-in hierarchy
-                                                   [:parents (first next)]
-                                                   current)]
+                                                   [:links (first next)]
+                                                   {:menu-item current
+                                                    :position i})]
                                (condp apply [action]
                                  fn? (action)
                                  keyword? (create-menu next hrchy view-impl
                                                        dispatch widget-hooks)
                                  (dispatch action)))))]
-       (let [back (if-let [parent (get-in hierarchy
-                                          [:parents title])]
-                    #(create-menu parent hierarchy view-impl
-                                  dispatch widget-hooks)
+       (let [back (if-let [parent (get-in hierarchy [:links title])]
+                    #(create-menu (:menu-item parent)
+                                  hierarchy view-impl dispatch
+                                  (conj widget-hooks
+                                        (fn [menu]
+                                          (.select menu (:position parent))
+                                          (render))))
                     (constantly nil))]
-         (.onceKey menu "h" back)
-         (.onceKey menu "left" back))
+         (doto menu
+           (.onceKey "h" back)
+           (.onceKey "left" back)))
        (doseq [hook widget-hooks] (hook menu))
        menu)))
