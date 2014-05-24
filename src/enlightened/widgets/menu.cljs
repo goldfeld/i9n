@@ -6,25 +6,29 @@
             hierarchy menu-items)))
 
 (defn create-menu
-  ([menu-item hierarchy view-impl]
-     (create-menu menu-item hierarchy view-impl identity []))
-  ([menu-item hierarchy view-impl action-dispatch]
-     (create-menu menu-item hierarchy view-impl action-dispatch []))
-  ([menu-item hierarchy view-impl action-dispatch widget-hooks]
-     (let [[title options] menu-item
+  ([current hierarchy view-impl]
+     (create-menu current hierarchy view-impl identity []))
+  ([current hierarchy view-impl dispatch]
+     (create-menu current hierarchy view-impl dispatch []))
+  ([current hierarchy view-impl dispatch widget-hooks]
+     (let [[title options] current
            menu (view-impl title (take-nth 2 options)
                            (fn [i items]
-                             (let [selection (nth options (* 2 i))
-                                   action (nth options (inc (* 2 i)))]
+                             (let [action (nth options (inc (* 2 i)))
+                                   next (action hierarchy)
+                                   hrchy (assoc-in hierarchy
+                                                   [:parents (first next)]
+                                                   current)]
                                (condp apply [action]
-                                 keyword? (create-menu (action hierarchy)
-                                                       (assoc-in
-                                                        hierarchy
-                                                        [:parents selection]
-                                                        menu-item)
-                                                       view-impl
-                                                       action-dispatch
-                                                       widget-hooks)
-                                 (action-dispatch action)))))]
+                                 keyword? (create-menu next hrchy view-impl
+                                                       dispatch widget-hooks)
+                                 (dispatch action)))))]
+       (let [back (if-let [parent (get-in hierarchy
+                                          [:parents title])]
+                    #(create-menu parent hierarchy view-impl
+                                  dispatch widget-hooks)
+                    (constantly nil))]
+         (.onceKey menu "h" back)
+         (.onceKey menu "left" back))
        (doseq [hook widget-hooks] (hook menu))
        menu)))
