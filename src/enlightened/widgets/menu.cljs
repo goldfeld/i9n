@@ -20,6 +20,7 @@
                                                    [:parents (first next)]
                                                    current)]
                                (condp apply [action]
+                                 fn? (action)
                                  keyword? (create-menu next hrchy view-impl
                                                        dispatch widget-hooks)
                                  (dispatch action)))))]
