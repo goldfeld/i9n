@@ -1,7 +1,7 @@
 (ns enlightened.widgets.menu
   (:require [enlightened.core :refer [render]]))
 
-(defn create-menu-hierarchy [root-item menu-items]
+(defn create-hierarchy [root-item menu-items]
   (let [hierarchy {:root root-item}]
     (reduce (fn [coll x] (conj coll [(keyword (first x)) (rest x)]))
             hierarchy menu-items)))

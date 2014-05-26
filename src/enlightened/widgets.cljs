@@ -1,10 +1,7 @@
 (ns enlightened.widgets
-  (:require [enlightened.core :refer [get-screen switch-active-view
-                                      create-text create-box create-form
-                                      create-list set-list]]
+  (:require [enlightened.core :as core]
             [enlightened.framework :as p]
-            [enlightened.widgets.menu :refer [create-menu
-                                              create-menu-hierarchy]]))
+            [enlightened.widgets.menu :refer [create-menu create-hierarchy]]))
 
 (declare create-args set-args)
 
@@ -29,8 +26,8 @@
   ([widget type title content]
      (let [set-fn (type set-args)]
        (set-fn widget content)
-       (when (seq title) (.prepend widget (create-text {:left 2
-                                                        :content title}))))))
+       (when (seq title)
+         (.prepend widget (core/create-text {:left 2 :content title}))))))
 
 (defn alert
   ([content] (alert [] content))
@@ -49,7 +46,7 @@
        (.append view list)
        (.focus list)
        (set-content list :list title content)
-       (switch-active-view view)
+       (core/switch-active-view view)
        list)))
 
 (defn menu-view
@@ -59,13 +56,13 @@
      (let [{menu :xs
             root :x} (group-by #(if (= 2 (count %)) :x :xs) menu-items)]
        (create-menu (first root)
-                    (create-menu-hierarchy root menu)
+                    (create-hierarchy root menu)
                     view-impl
                     action-dispatch
                     widget-hooks))))
 
-(def ^:private create-args
-  {:list [create-list
+(def create-args
+  {:list [core/create-list
           [p/centered p/half-height p/line-bordered p/interactive-vi]
           {:align "left"
            :width "75%"
@@ -73,18 +70,18 @@
            :selectedBg "blue"
            :selectedFg "white"}]
 
-   :preview [create-box
+   :preview [core/create-box
              []
              {:width "75%"
               :height "25%"
               :bottom 0
               :left "center"}]
 
-   :wrapper [create-box
+   :wrapper [core/create-box
              []
-             {:parent (get-screen)
+             {:parent (core/get-screen)
               :width "100%"
               :height "100%"}]})
 
-(def ^:private set-args
-  {:list set-list})
+(def set-args
+  {:list core/set-list})
