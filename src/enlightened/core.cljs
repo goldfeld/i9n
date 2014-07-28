@@ -1,10 +1,8 @@
 (ns enlightened.core
   (:require [cljs.nodejs :as node]))
 
-(def ^:private bestowed (node/require "blessed"))
-
-(def get-screen
-  (memoize (fn [] (.screen bestowed))))
+(def get-blessed (memoize #(node/require "blessed")))
+(def get-screen (memoize #(.screen (get-blessed))))
 
 (defn render []
   (.render (get-screen)))
@@ -27,20 +25,20 @@
     (widget-fn (-> props modify override))))
 
 (defn create-text [props]
-  (.text bestowed (clj->js props)))
+  (.text (get-blessed) (clj->js props)))
 
 (defn create-form
-  ([props] (.form bestowed (clj->js props)))
+  ([props] (.form (get-blessed) (clj->js props)))
   ([mods props] (create-form [] mods props))
   ([overrides mods props] (create-widget create-form mods props overrides)))
 
 (defn create-box
-  ([props] (.box bestowed (clj->js props)))
+  ([props] (.box (get-blessed) (clj->js props)))
   ([mods props] (create-box [] mods props))
   ([overrides mods props] (create-widget create-box mods props overrides)))
 
 (defn create-list
-  ([props] (.list bestowed (clj->js props)))
+  ([props] (.list (get-blessed) (clj->js props)))
   ([mods props] (create-list [] mods props))
   ([overrides mods props] (create-widget create-list mods props overrides)))
 
