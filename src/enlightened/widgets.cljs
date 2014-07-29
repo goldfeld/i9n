@@ -1,7 +1,8 @@
 (ns enlightened.widgets
+  (:refer-clojure :exclude [list])
   (:require [enlightened.core :as core]
             [enlightened.framework :as p]
-            [enlightened.widgets.menu :refer [create-menu create-hierarchy]]))
+            [enlightened.widgets.menu-impl :as menu-impl]))
 
 (declare create-args set-args)
 
@@ -35,31 +36,43 @@
   ([timeout overrides content]
      (js/setTimeout #(.log js/console content) 100)))
 
+(defn list
+  ([title content on-select]
+     (let [lst (list title content)]
+       (.on lst "select" #(on-select %2 content))
+       lst))
+  ([title content]
+     (let [lst (create :list)]
+       (set-content lst :list title content)
+       lst)))
+
 (defn list-view
   ([title content on-select]
-     (let [list (list-view title content)]
-       (.on list "select" #(on-select %2 content))
-       list))
+     (let [lst (list-view title content)]
+       (.on lst "select" #(on-select %2 content))
+       lst))
   ([title content]
      (let [view (create :wrapper :height "75%")
-           list (create :list)]
-       (.append view list)
-       (.focus list)
-       (set-content list :list title content)
+           lst (list title content)]
+       (.append view lst)
+       (.focus lst)
        (core/switch-active-view view)
-       list)))
+       lst)))
 
-(defn menu-view
+(defn menu
   ([menu-items action-dispatch widget-hooks]
-     (menu-view menu-items action-dispatch widget-hooks list-view))
+     (menu menu-items action-dispatch widget-hooks list))
   ([menu-items action-dispatch widget-hooks view-impl]
-     (let [{menu :xs
+     (let [{menus :xs
             root :x} (group-by #(if (= 2 (count %)) :x :xs) menu-items)]
-       (create-menu (first root)
-                    (create-hierarchy root menu)
-                    view-impl
-                    action-dispatch
-                    widget-hooks))))
+       (menu-impl/create-menu (first root)
+                              (menu-impl/create-hierarchy root menus)
+                              view-impl
+                              action-dispatch
+                              widget-hooks))))
+
+(defn menu-view [menu-items action-dispatch widget-hooks]
+  (menu menu-items action-dispatch widget-hooks list-view))
 
 (def create-args
   {:list [core/create-list

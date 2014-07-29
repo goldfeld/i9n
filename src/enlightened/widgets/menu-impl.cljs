@@ -1,4 +1,4 @@
-(ns enlightened.widgets.menu
+(ns enlightened.widgets.menu-impl
   (:require [enlightened.core :refer [render]]))
 
 (defn create-hierarchy [root-item menu-items]
