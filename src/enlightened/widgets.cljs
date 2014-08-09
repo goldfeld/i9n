@@ -7,14 +7,14 @@
 (declare create-args set-args)
 
 (defn types []
-  [:list :preview :wrapper])
+  [:list :preview :row :wrapper :commandline])
 
 (defn create
   "Creates a widget. The overrides parameters are key-value pairs of a
   property and the desired override value.
   (See enlightened.widgets/types for valid type values.)"
   [type & overrides]
-  (let [[create-fn mods props] (type create-args)]
+  (let [[create-fn mods props] (create-args type)]
     (create-fn overrides mods props)))
 
 (defn set-content
@@ -74,27 +74,32 @@
 (defn menu-view [menu-items action-dispatch widget-hooks]
   (menu menu-items action-dispatch widget-hooks list-view))
 
-(def create-args
-  {:list [core/create-list
-          [p/centered p/half-height p/line-bordered p/interactive-vi]
-          {:align "left"
-           :width "75%"
-           :fg "blue"
-           :selectedBg "blue"
-           :selectedFg "white"}]
-
-   :preview [core/create-box
-             []
-             {:width "75%"
-              :height "25%"
-              :bottom 0
-              :left "center"}]
-
-   :wrapper [core/create-box
-             []
-             {:parent (core/get-screen)
-              :width "100%"
-              :height "100%"}]})
+(defn create-args [type]
+  (case type
+    :list [core/create-list
+           [p/centered p/half-height p/line-bordered p/interactive-vi]
+           {:align "left"
+            :width "75%"
+            :fg "blue"
+            :selectedBg "blue"
+            :selectedFg "white"}]
+    :preview [core/create-box
+              []
+              {:width "75%"
+               :height "25%"
+               :bottom 0
+               :left "center"}]
+    :row [core/create-box [] {:width "100%"}]
+    :wrapper [core/create-box
+              []
+              {:parent (core/get-screen)
+               :width "100%"
+               :height "100%"}]
+    :commandline [core/create-textbox
+                  []
+                  {:width "100%"
+                   :bottom 0
+                   :fg "yellow"}]))
 
 (def set-args
   {:list core/set-list})
