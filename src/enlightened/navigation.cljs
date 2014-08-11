@@ -1,14 +1,15 @@
-(ns enlightened.widgets.menu-impl
-  (:require [enlightened.core :as core]))
+(ns enlightened.navigation
+  (:require [enlightened.core :as core]
+            [enlightened.widgets :as widgets]))
 
-(declare create-menu)
+(declare create-pane)
 
-(defn into-hierarchy [hierarchy menu-items]
+(defn into-hierarchy [hierarchy nav-items]
   (reduce (fn [m x] (assoc m (keyword (first x)) (rest x)))
-          hierarchy menu-items))
+          hierarchy nav-items))
 
-(defn create-hierarchy [root-item menu-items]
-  (into-hierarchy {:root root-item} menu-items))
+(defn create-hierarchy [root-item nav-items]
+  (into-hierarchy {:root root-item} nav-items))
 
 (defn toggle-back-binds [widget toggle listener]
   (if toggle
@@ -16,22 +17,22 @@
     (doto widget (.unkey "h" listener) (.unkey "left" listener))))
 
 (defn create-go-next-fn [view current dispatch back widget-hooks]
-  (fn [menu-item position hierarchy]
+  (fn [nav-item position hierarchy]
     (toggle-back-binds view false back)
-    (create-menu menu-item (assoc-in hierarchy
-                                     [:links (first menu-item)]
-                                     {:menu-item current :position position})
+    (create-pane nav-item (assoc-in hierarchy
+                                    [:links (first nav-item)]
+                                    {:nav-item current :position position})
                  view dispatch widget-hooks)))
 
 (defn clean-widget-hooks [widget-hooks]
   (doto widget-hooks
     (dissoc :back)))
 
-(defn create-menu
+(defn create-pane
   ([current hierarchy view]
-     (create-menu current hierarchy view identity []))
+     (create-pane current hierarchy view identity []))
   ([current hierarchy view dispatch]
-     (create-menu current hierarchy view dispatch []))
+     (create-pane current hierarchy view dispatch []))
   ([[title options :as current] hierarchy view dispatch widget-hooks]
      (let [hooks (clean-widget-hooks widget-hooks)
            label (core/set-title view title)
@@ -39,7 +40,7 @@
            back (if-let [parent (get-in hierarchy [:links title])]
                   (fn []
                     (toggle-back-binds view false (js* "this"))
-                    (create-menu (:menu-item parent)
+                    (create-pane (:nav-item parent)
                                  hierarchy view dispatch
                                  (assoc hooks
                                    :remove-title #(.detach label)
@@ -71,3 +72,16 @@
        (doseq [[handle hook] hooks] (hook view))
        (core/render)
        view)))
+
+(defn navigation
+  ([nav-items action-dispatch widget-hooks]
+     (navigation nav-items action-dispatch widget-hooks (widgets/create :list)))
+  ([nav-items action-dispatch widget-hooks list]
+     (let [{navs :xs
+            root :x} (group-by #(if (= 2 (count %)) :x :xs) nav-items)]
+       (create-pane (first root)
+                    (create-hierarchy root navs)
+                    list action-dispatch widget-hooks))))
+
+(defn navigation-view [nav-items action-dispatch widget-hooks]
+  (navigation nav-items action-dispatch widget-hooks (widgets/list-view)))

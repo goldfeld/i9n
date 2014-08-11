@@ -1,8 +1,7 @@
 (ns enlightened.widgets
   (:refer-clojure :exclude [list])
   (:require [enlightened.core :as core]
-            [enlightened.framework :as p]
-            [enlightened.widgets.menu-impl :as menu-impl]))
+            [enlightened.framework :as p]))
 
 (declare create-args set-args)
 
@@ -60,21 +59,6 @@
        (.focus lst)
        (core/switch-active-view view)
        lst)))
-
-(defn menu
-  ([menu-items action-dispatch widget-hooks]
-     (menu menu-items action-dispatch widget-hooks (create :list)))
-  ([menu-items action-dispatch widget-hooks list]
-     (let [{menus :xs
-            root :x} (group-by #(if (= 2 (count %)) :x :xs) menu-items)]
-       (menu-impl/create-menu (first root)
-                              (menu-impl/create-hierarchy root menus)
-                              list
-                              action-dispatch
-                              widget-hooks))))
-
-(defn menu-view [menu-items action-dispatch widget-hooks]
-  (menu menu-items action-dispatch widget-hooks (list-view)))
 
 (defn create-args [type]
   (case type
