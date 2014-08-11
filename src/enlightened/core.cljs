@@ -9,6 +9,15 @@
 
 (def ^:private *active* (atom nil))
 
+(defn bind-global-keys
+  ([key-arg fn]
+     (.key (get-screen) (clj->js key-arg) fn))
+  ([key-arg fn & args]
+     (let [screen (get-screen)]
+       (.key screen (clj->js key-arg) fn)
+       (doseq [[k f] (partition 2 args)]
+         (.key screen (clj->js k) f)))))
+
 (defn switch-active-view [new-active]
   (let [active (deref *active*)]
     (reset! *active* new-active)
