@@ -42,8 +42,15 @@
   ([mods props] (create-list [] mods props))
   ([overrides mods props] (create-widget create-list mods props overrides)))
 
-(defn set-list [widget items]
-  (.setItems widget (clj->js items)))
+(defn set-items [widget items]
+  (if (seq items)
+    (.setItems widget (clj->js items))
+    (throw "Can't set widget's items, items not seqable.")))
+
+(defn set-title [widget title]
+  (if (seq title)
+    (.prepend widget (create-text {:left 2 :content title}))
+    (throw "Can't set widget's title, title not seqable.")))
 
 (defn set-key [widget key-or-keys action]
   (.key widget (clj->js key-or-keys) action))

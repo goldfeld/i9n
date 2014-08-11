@@ -27,8 +27,7 @@
   ([widget type title content]
      (let [set-fn (type set-args)]
        (set-fn widget content)
-       (when (seq title)
-         (.prepend widget (core/create-text {:left 2 :content title}))))))
+       (core/set-title widget title))))
 
 (defn alert
   ([content] (alert [] content))
@@ -52,8 +51,11 @@
        (.on lst "select" #(on-select %2 content))
        lst))
   ([title content]
+     (doto (list-view)
+       (set-content :list title content)))
+  ([]
      (let [view (create :wrapper :height "75%")
-           lst (list title content)]
+           lst (create :list)]
        (.append view lst)
        (.focus lst)
        (core/switch-active-view view)
@@ -61,18 +63,18 @@
 
 (defn menu
   ([menu-items action-dispatch widget-hooks]
-     (menu menu-items action-dispatch widget-hooks list))
-  ([menu-items action-dispatch widget-hooks view-impl]
+     (menu menu-items action-dispatch widget-hooks (create :list)))
+  ([menu-items action-dispatch widget-hooks list]
      (let [{menus :xs
             root :x} (group-by #(if (= 2 (count %)) :x :xs) menu-items)]
        (menu-impl/create-menu (first root)
                               (menu-impl/create-hierarchy root menus)
-                              view-impl
+                              list
                               action-dispatch
                               widget-hooks))))
 
 (defn menu-view [menu-items action-dispatch widget-hooks]
-  (menu menu-items action-dispatch widget-hooks list-view))
+  (menu menu-items action-dispatch widget-hooks (list-view)))
 
 (defn create-args [type]
   (case type
@@ -102,4 +104,4 @@
                    :fg "yellow"}]))
 
 (def set-args
-  {:list core/set-list})
+  {:list core/set-items})
