@@ -7,6 +7,9 @@
 (defn render []
   (.render (get-screen)))
 
+(defn render-deferred []
+  (js/setTimeout render 0))
+
 (def ^:private *active* (atom nil))
 
 (defn bind-global-keys
@@ -53,12 +56,15 @@
 
 (defn set-items [widget items]
   (if (seq items)
-    (.setItems widget (clj->js items))
+    (do (.setItems widget (clj->js items))
+        (vec items))
     (throw "Can't set widget's items, items not seqable.")))
 
 (defn set-title [widget title]
   (if (seq title)
-    (.prepend widget (create-text {:left 2 :content title}))
+    (let [title-widget (create-text {:left 2 :content title})]
+      (.prepend widget title-widget)
+      title-widget)
     (throw "Can't set widget's title, title not seqable.")))
 
 (defn set-key [widget key-or-keys action]
