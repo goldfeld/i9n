@@ -1,5 +1,6 @@
 (ns enlightened.core
-  (:require [cljs.nodejs :as node]))
+  (:require [cljs.nodejs :as node]
+            [cljs.core.async.impl.protocols :refer [Channel]]))
 
 (def get-blessed (memoize #(node/require "blessed")))
 (def get-screen (memoize #(.screen (get-blessed))))
@@ -20,6 +21,9 @@
        (.key screen (clj->js key-arg) fn)
        (doseq [[k f] (partition 2 args)]
          (.key screen (clj->js k) f)))))
+
+(defn channel? [x]
+  (satisfies? Channel x))
 
 (defn switch-active-view [new-active]
   (let [active (deref *active*)]
@@ -56,8 +60,7 @@
 
 (defn set-items [widget items]
   (if (seq items)
-    (do (.setItems widget (clj->js items))
-        (vec items))
+    (.setItems widget (clj->js items))
     (throw "Can't set widget's items, items not seqable.")))
 
 (defn set-title [widget title]
