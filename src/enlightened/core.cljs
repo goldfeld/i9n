@@ -25,14 +25,20 @@
 (defn channel? [x]
   (satisfies? Channel x))
 
-(defn switch-active-view [new-active]
-  (let [active (deref *active*)]
-    (reset! *active* new-active)
-    (when active (.setBack active))
-    (.setFront new-active)
-    (render)))
+(defn switch-active-view
+  ([new-active main-widget]
+     (.focus main-widget)
+     (switch-active-view new-active)
+     main-widget)
+  ([new-active]
+     (let [active (deref *active*)]
+       (reset! *active* new-active)
+       (when active (.setBack active))
+       (.setFront new-active)
+       (render)
+       new-active)))
     
-(defn ^:private create-widget
+(defn create-widget
   [widget-fn mods props overrides]
   ;(let [mod->fn (comp resolve (partial symbol "framework") name)
         ;modify (apply comp (map mod->fn mods))]
@@ -59,9 +65,8 @@
   ([overrides mods props] (create-widget create-list mods props overrides)))
 
 (defn set-items [widget items]
-  (if (seq items)
-    (.setItems widget (clj->js items))
-    (throw "Can't set widget's items, items not seqable.")))
+  (.setItems widget (clj->js items))
+  items)
 
 (defn set-title [widget title]
   (if (seq title)

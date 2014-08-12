@@ -6,7 +6,7 @@
 (declare create-args set-args)
 
 (defn types []
-  [:list :preview :row :wrapper :commandline])
+  [:list :text :preview :row :wrapper :commandline])
 
 (defn create
   "Creates a widget. The overrides parameters are key-value pairs of a
@@ -46,19 +46,37 @@
 
 (defn list-view
   ([title content on-select]
-     (let [lst (list-view title content)]
-       (.on lst "select" #(on-select %2 content))
-       lst))
+     (let [widget (list-view title content)]
+       (.on widget "select" #(on-select %2 content))
+       widget))
   ([title content]
      (doto (list-view)
        (set-content :list title content)))
   ([]
      (let [view (create :wrapper :height "75%")
-           lst (create :list)]
-       (.append view lst)
-       (.focus lst)
-       (core/switch-active-view view)
-       lst)))
+           widget (create :list)]
+       (.append view widget)
+       (core/switch-active-view view widget)
+       widget)))
+
+(defn text
+  ([title txt]
+     (let [widget (text txt)]
+       (core/set-title widget title)
+       widget))
+  ([txt]
+     (let [widget (create :text)]
+       (.setContent widget txt)
+       widget)))
+
+(defn text-view [title text]
+  (let [view (create :wrapper :height "75%")
+        widget (create :text)]
+    (.append view widget)
+    (.setContent widget text)
+    (core/set-title widget title)
+    (core/switch-active-view view widget)
+    widget))
 
 (defn create-args [type]
   (case type
@@ -69,6 +87,14 @@
             :fg "blue"
             :selectedBg "blue"
             :selectedFg "white"}]
+    :text [core/create-box
+           [p/interactive-vi]
+           {:scrollable true
+            :alwaysScroll true
+            :width "75%"
+            :height "80%"
+            :top "center"
+            :left 5}]
     :preview [core/create-box
               []
               {:width "75%"
