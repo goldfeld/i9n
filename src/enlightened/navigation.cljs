@@ -87,6 +87,7 @@
           (let [action (nth options (inc (* 2 i)))]
             (condp apply [action]
               keyword? (go-key action i)
+              channel? (async-pane action go-next widget i hierarchy)
               fn?
               (let [res (action)]
                 (condp apply [res]
