@@ -65,9 +65,10 @@
        (core/set-title widget title)
        widget))
   ([txt]
-     (let [widget (create :text)]
+     (let [widget (text)]
        (.setContent widget txt)
-       widget)))
+       widget))
+  ([] (create :text)))
 
 (defn text-view [title text]
   (let [view (create :wrapper :height "75%")

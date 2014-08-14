@@ -25,6 +25,9 @@
 (defn channel? [x]
   (satisfies? Channel x))
 
+(defn widget? [x]
+  (.hasOwnProperty x "screen"))
+
 (defn switch-active-view
   ([new-active main-widget]
      (.focus main-widget)
@@ -78,12 +81,19 @@
 (defn set-key [widget key-or-keys action]
   (.key widget (clj->js key-or-keys) action))
 
+(defn unset-key [widget key-or-keys action]
+  (.unkey widget (clj->js key-or-keys) action))
+
 (defn set-key-once [widget key-or-keys action]
   (.onceKey widget (clj->js key-or-keys) action))
 
-(defn set-keys
-  [widget & keymaps]
-  (doseq [kmap (partition 2 keymaps)]
-    (let [[key fn] kmap
-          ->js #(if (vector? %) clj->js identity)]
-      (.key widget (->js key) fn))))
+(defn ->js [key-or-keys]
+  (if (vector? key-or-keys) (clj->js key-or-keys) key-or-keys))
+
+(defn set-keys [widget & keymaps]
+  (doseq [[key fn] (partition 2 keymaps)]
+    (.key widget (->js key) fn)))
+
+(defn unset-keys [widget & keymaps]
+  (doseq [[key fn] (partition 2 keymaps)]
+    (.unkey widget (->js key) fn)))

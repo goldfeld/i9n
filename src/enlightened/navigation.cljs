@@ -1,7 +1,7 @@
 (ns enlightened.navigation
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :as a]
-            [enlightened.core :as core :refer [channel?]]
+            [enlightened.core :as core :refer [channel? widget?]]
             [enlightened.widgets :as widgets]))
 
 (declare create-pane)
@@ -13,24 +13,24 @@
 (defn create-hierarchy [root-item nav-entries]
   (into-hierarchy {:root root-item} nav-entries))
 
-(defn bind-back-handler [widget back-handler]
-  (.onceKey widget (clj->js ["h" "left"]) back-handler))
+(defn bind-back-handler [widget back-handler left-binds]
+  (core/set-key-once widget left-binds back-handler))
 
-(defn unbind-back-handler [widget back-handler]
-  (.unkey widget (clj->js ["h" "left"]) back-handler))
+(defn unbind-back-handler [widget back-handler left-binds]
+  (core/unset-key widget left-binds back-handler))
 
-(defn create-nav-fn [widget focus dispatch]
+(defn create-nav-fn [widget focus cfg]
   (fn [next back-handler hierarchy chan hooks]
     (when chan (a/close! chan))
-    (unbind-back-handler focus back-handler)
+    (unbind-back-handler focus back-handler (-> cfg :key-binds :left))
     (.detach (first (.-children widget)))
-    (create-pane chan next hierarchy widget dispatch hooks)))
+    (create-pane chan next hierarchy widget (assoc cfg :widget-hooks hooks))))
 
-(defn create-back-handler [nav-fn title hierarchy hooks]
-  (if-let [parent (get-in hierarchy [:links title])]
+(defn create-back-handler [nav-fn id hierarchy hooks]
+  (if-let [parent (get-in hierarchy [:links id])]
     #(nav-fn (:nav-entry parent) (js* "this") hierarchy nil
-             (assoc hooks :back (fn [vw]
-                                  (.select vw (:pos parent))
+             (assoc hooks :back (fn [widget]
+                                  (.select widget (:pos parent))
                                   :do-once)))
     (constantly nil)))
 
@@ -44,79 +44,104 @@
                       items))
                   [] (a/partition 2 chan)))))
 
-(defn create-text-viewer [pane text]
-  (let [viewer (widgets/text text)]
-    (core/set-items pane [])
-    (.append pane viewer)
-    (.focus viewer)
-    viewer))
+(defn create-text-viewer!
+  ([pane text]
+     (let [viewer (create-text-viewer! pane)]
+       (.setContent viewer text)
+       viewer))
+  ([pane]
+     (let [viewer (widgets/text)]
+       (core/set-items pane [])
+       (.append pane viewer)
+       (.focus viewer)
+       viewer)))
+
+(defn create-action! [options selection restore-state pane binds]
+  (let [actions (take-nth 2 (rest options))]
+    (nth actions selection)))
+
+(def config-default
+  {:dispatch identity
+   :widget-hooks {}
+   :key-binds {:quit ["q" "escape"]
+               :left ["h" "left"]
+               :right ["l" "right"]}})
+
+(defn create-selection-fn
+  "Creates the pane/navigation selection fn to be passed to blessed's
+  list internals. Here is all the logic dependant on what type of se"
+  [widget options go-next restore hierarchy cfg]
+  (let [go-id (fn [id pos] (if-let [next (get hierarchy id)]
+                             (go-next (cons id next) pos hierarchy nil)))]
+    (fn [_ i]
+      (let [action (create-action! options i restore widget (:key-binds cfg))]
+        (condp apply [action]
+          keyword? (go-id action i)
+          channel? (async-pane action go-next widget i hierarchy)
+          fn?
+          (let [res (action)]
+            (condp apply [res]
+              vector? (go-next (first res) i (into-hierarchy hierarchy res) nil)
+              keyword? (go-id res i)
+              string? (when-let [items (take-nth 2 options)]
+                        (core/set-items widget
+                                        (->> #(str % ": " res)
+                                             (update-in (vec items) [i])))
+                        (core/render-deferred))
+              channel? (async-pane res go-next widget i hierarchy)
+              widget? (do (.detach widget) res)))
+          channel? (async-pane action go-next widget i hierarchy)
+          keyword? (go-id action i)
+          ((:dispatch cfg) action))))))
 
 (defn create-pane
   ([current hierarchy widget]
-     (create-pane current hierarchy widget identity {}))
-  ([current hierarchy widget dispatch]
-     (create-pane current hierarchy widget dispatch {}))
-  ([current hierarchy widget dispatch widget-hooks]
-     (create-pane nil current hierarchy widget dispatch widget-hooks))
-  ([chan [title body :as current] hierarchy widget dispatch widget-hooks]
+     (create-pane nil current hierarchy widget config-default))
+  ([current hierarchy widget cfg]
+     (create-pane nil current hierarchy widget cfg))
+  ([chan [id title body :as current] hierarchy widget cfg]
      (let [[options focus next-hooks]
            (condp apply [body]
-             string? (let [txt (create-text-viewer widget body)]
-                       [nil txt {:remove-text (fn [] (.detach txt) :do-once)}])
+             string? (let [text (create-text-viewer! widget body)]
+                       [nil text {:remove-text #(do (.detach text) :do-once)}])
              [body widget {}])
-           items (if options (vec (core/set-items widget (take-nth 2 options))))
            hooks (merge (doall (reduce (fn [m [handle hook]]
                                          (let [res (hook widget)]
                                            (when-not (= :do-once res)
                                              (assoc m handle hook))))
-                                       {} widget-hooks))
+                                       {} (:widget-hooks cfg)))
                         next-hooks)
-           go-nav (create-nav-fn widget focus dispatch)
-           back (create-back-handler go-nav title hierarchy hooks)
+           go-nav (create-nav-fn widget focus cfg)
+           back (create-back-handler go-nav id hierarchy hooks)
            go-next (fn [next pos hrchy chan]
                      (go-nav next back (assoc-in hrchy [:links (first next)]
-                                                 {:nav-entry current :pos pos})
+                                                 {:nav-entry current
+                                                  :pos pos})
                              chan hooks))
-           go-key (fn [k pos] (if-let [next (get hierarchy k)]
-                                (go-next next pos hierarchy nil)))]
-       (bind-back-handler focus back)
-       (core/set-title widget title)
-       (.removeAllListeners widget "select")
-       (.on
-        widget "select"
-        (fn [_ i]
-          (let [action (nth options (inc (* 2 i)))]
-            (condp apply [action]
-              keyword? (go-key action i)
-              channel? (async-pane action go-next widget i hierarchy)
-              fn?
-              (let [res (action)]
-                (condp apply [res]
-                  vector? (go-next (-> res first rest) i
-                                   (into-hierarchy hierarchy res) nil)
-                  keyword? (go-key res i)
-                  string? (when items
-                            (core/set-items widget
-                                            (->> #(str % ": " res)
-                                                 (update-in items [i])))
-                            (core/render-deferred))
-                  channel? (async-pane res go-next widget i hierarchy)
-                  (if (.hasOwnProperty res "screen") (.detach widget) res)))
-              channel? (async-pane action go-next widget i hierarchy)
-              (dispatch action)))))
+           restore (fn [pos]
+                     (create-pane chan (cons id (get hierarchy id)) hierarchy
+                                  widget (assoc cfg :widget-hooks hooks))
+                     (.select widget pos))]
+       (when options (core/set-items widget (take-nth 2 options)))
+       (bind-back-handler focus back (-> cfg :key-binds :left))
+       (doto widget
+         (core/set-title title)
+         (.removeAllListeners "select")
+         (.on "select" (create-selection-fn widget options go-next
+                                            restore hierarchy cfg)))
        (core/render))
      widget))
 
 (defn navigation
-  ([nav-entries action-dispatch widget-hooks]
-     (navigation nav-entries action-dispatch widget-hooks
-                 (widgets/create :list)))
-  ([nav-entries action-dispatch widget-hooks list]
+  ([nav-entries] (navigation nav-entries {}))
+  ([nav-entries cfg] (navigation nav-entries cfg (widgets/create :list)))
+  ([nav-entries cfg list]
      (let [{navs :xs
             root :x} (group-by #(if (= 2 (count %)) :x :xs) nav-entries)]
-       (create-pane nil (first root)
+       (create-pane nil (cons :root (first root))
                     (create-hierarchy root navs)
-                    list action-dispatch widget-hooks))))
+                    list (merge config-default cfg)))))
 
-(defn navigation-view [nav-entries action-dispatch widget-hooks]
-  (navigation nav-entries action-dispatch widget-hooks (widgets/list-view)))
+(defn navigation-view
+  ([nav-entries] (navigation-view nav-entries {}))
+  ([nav-entries cfg] (navigation nav-entries cfg (widgets/list-view))))
