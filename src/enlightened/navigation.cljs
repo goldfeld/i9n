@@ -35,11 +35,12 @@
     (constantly nil)))
 
 (defn async-pane [chan go-next widget pos hierarchy]
-  (go (let [title (a/<! chan)]
+  (go (let [id (a/<! chan)
+            title (a/<! chan)]
         (a/reduce (fn [options opt]
                     (.detach (first (.-children widget)))
                     (let [items (into options opt)]
-                      (go-next [title items] pos hierarchy chan)
+                      (go-next [id title items] pos hierarchy chan)
                       items))
                   [] (a/partition 2 chan)))))
 
