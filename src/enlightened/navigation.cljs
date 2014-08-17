@@ -56,9 +56,41 @@
        (.focus viewer)
        viewer)))
 
+(defn go-to-book-part [i chan book km key-binds titles parts]
+  (apply core/unset-keys book @km)
+  (.setContent book (nth parts i))
+  (core/render)
+  (let [quit (fn [] (a/put! chan [:pos i]) (a/close! chan))
+        kmaps [(:quit key-binds) quit
+               (:left key-binds)
+               (if (> i 0)
+                 #(go-to-book-part (dec i) chan book km key-binds titles parts)
+                 quit)
+               (:right key-binds)
+               (if (< i (dec (count parts)))
+                 #(go-to-book-part (inc i) chan book km key-binds titles parts)
+                 (constantly nil))]]
+    (reset! km kmaps)
+    (apply core/set-keys book kmaps)
+    chan))
+
 (defn create-action! [options selection restore-state pane binds]
   (let [actions (take-nth 2 (rest options))]
-    (nth actions selection)))
+    (if (every? string? actions)
+      (let [book (create-text-viewer! pane)
+            chan (a/chan)]
+        (go (let [res (<! (a/reduce
+                           (fn [m msg] (case (first msg)
+                                         :pos (assoc m :pos (second msg))
+                                         m))
+                           {}
+                           (go-to-book-part selection chan book (atom nil) binds
+                                            (take-nth 2 options) actions)))]
+              (.detach book)
+              (restore-state (or (:pos res) 0))
+              (core/render-deferred)))
+        nil)
+      (nth actions selection))))
 
 (def config-default
   {:dispatch identity
@@ -77,6 +109,10 @@
       (let [action (create-action! options i restore widget (:key-binds cfg))]
         (condp apply [action]
           keyword? (go-id action i)
+          string? (let [text (create-text-viewer! widget action)]
+
+                    [nil text {:remove-text #(do (.detach text) :do-once)}])
+
           channel? (async-pane action go-next widget i hierarchy)
           fn?
           (let [res (action)]

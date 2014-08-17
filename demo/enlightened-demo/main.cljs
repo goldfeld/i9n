@@ -23,9 +23,11 @@
 
 (defn nav []
   [["inkstick" ["view text" :Text
+                "view book" :Book
                 "test" :test
                 "quit" #(proc/exit)]]
    [:Text "Text" lorem]
+   [:Book "Book" ["ch.1" lorem "ch.2" "Second part" "ch.3" "The End"]]
    [:test "focus" ["sadly asynchronous" #(sad-async)
                    "sysiphus" #(navigation-view (nav))
                    "jit" (fn [] [[:new "Menu" ["a" :ho "d" :d]]
