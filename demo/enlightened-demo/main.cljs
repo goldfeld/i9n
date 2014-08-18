@@ -8,12 +8,18 @@
 
 (defn sad-async []
   (let [chan (a/chan)]
-    (a/put! chan :hop)
-    (a/put! chan "Hop!")
-    (a/put! chan "haha")
-    (a/put! chan :hey)
-    (a/put! chan "hooooo")
-    (a/put! chan :ho)
+    (doto chan
+      (a/put! [:add [:hip "aha" ["ha" (fn [] nil)]]])
+      (a/put! [:fix [:hip :title "Hop!"]])
+      (a/put! [:fix [:hip 0 "to non-async"]])
+      (a/put! [:fix [:hip 1 :ho]])
+      (a/put! [:add [:here "Here" ["text" :ho "book" :Book]]])
+      (a/put! [:fix [:hip 2 "hooooo"]])
+      (a/put! [:fix [:hip 3 :here]])
+      (a/put! [:fix [:here 0 "ho"]])
+      (a/put! [:next :hip])
+      (a/close!))
+    (core/render-deferred)
     chan))
 
 (def lorem
@@ -31,13 +37,12 @@
    [:test "focus" ["sadly asynchronous" #(sad-async)
                    "sysiphus" #(navigation-view (nav))
                    "jit" (fn [] [[:new "Menu" ["a" :ho "d" :d]]
-                                 [:d "d" ["a" :ho]]])
-                   "hey" :hey]]
-   [:hey "guess" ["a" :a "b" :b "c" :c]]
+                                 [:d "d" ["a" :ho]]])]]
    [:ho "go" ["hum" (constantly "sad")]]])
 
 (defn -main [& input]
   (core/bind-global-keys ["C-c"] #(proc/exit))
-  (navigation-view (nav)))
+  (let [[cmd & args] input]
+    (navigation-view (nav))))
 
 (set! *main-cli-fn* -main)

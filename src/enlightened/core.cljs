@@ -72,11 +72,11 @@
   items)
 
 (defn set-title [widget title]
-  (if (seq title)
+  (if (string? title)
     (let [title-widget (create-text {:left 2 :content title})]
       (.prepend widget title-widget)
       title-widget)
-    (throw "Can't set widget's title, title not seqable.")))
+    (throw "Can't set widget's title, title is not a string.")))
 
 (defn set-key [widget key-or-keys action]
   (.key widget (clj->js key-or-keys) action))
