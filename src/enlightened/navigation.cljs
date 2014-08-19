@@ -119,13 +119,15 @@
   (let [current-id (-> nav :current first)
         new-nav (reduce
                  (fn [n [id place fix]]
-                   (let [path (if (= :title place) [0] [1 place])
+                   (let [title (= :title place)
                          n' (if persist?
-                              (assoc-in n (into [:hierarchy id] path) fix)
+                              (assoc-in n (into [:hierarchy id]
+                                                (if title [0] [1 place])) fix)
                               n)]
                      (if (= id current-id)
                        (-> (assoc n' :dirty true)
-                           (assoc-in (cons :current path) fix))
+                           (assoc-in (cons :current
+                                           (if title [1] [2 place])) fix))
                        n')))
                  nav args)
         n (dissoc new-nav :dirty)]
