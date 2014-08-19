@@ -62,10 +62,9 @@
 (defn create-selection-fn
   "Creates the pane/navigation selection fn to be passed to blessed's
   list internals. Here is all the logic dependant on what type of se"
-  [widget nav chan cfg]
+  [widget [id title options] chan cfg]
   (fn [_ i]
-    (let [[id title options] (:current nav) 
-          action (create-action! options i #(a/put! chan [:hop id %])
+    (let [action (create-action! options i #(a/put! chan [:hop id %])
                                  widget (:key-binds cfg))]
       (condp apply [action]
         keyword? (a/put! chan [:next action i])
@@ -92,7 +91,7 @@
 
 (defn create-refresh-fn [widget chan cfg]
   (fn [nav]
-    (let [[id title body] (:current nav)
+    (let [[id title body :as current] (:current nav)
           options
           (condp apply [body]
             string? (let [text (create-text-viewer! widget body)]
@@ -112,7 +111,7 @@
         (doto widget
           (core/set-items (take-nth 2 options))
           (.select (:pos nav))
-          (.on "select" (create-selection-fn widget nav chan cfg))))
+          (.on "select" (create-selection-fn widget current chan cfg))))
       (core/render))
     (dissoc nav :rm-back)))
 
