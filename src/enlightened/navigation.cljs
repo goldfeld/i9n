@@ -62,34 +62,34 @@
 (defn create-selection-fn
   "Creates the pane/navigation selection fn to be passed to blessed's
   list internals. Here is all the logic dependant on what type of se"
-  [widget [id title options] chan cfg]
+  [widget [id title options] {main :main :as channels} cfg]
   (fn [_ i]
-    (let [action (create-action! options i #(a/put! chan [:hop id %])
+    (let [action (create-action! options i #(a/put! main [:hop id %])
                                  widget (:key-binds cfg))]
       (condp apply [action]
-        keyword? (a/put! chan [:next action i])
+        keyword? (a/put! main [:next action i])
         string? (let [text (create-text-viewer! widget action)]
 
                   [nil text {:remove-text #(do (.detach text) :do-once)}])
 
-        channel? (a/pipe action chan false)
+        channel? (a/pipe action main false)
         fn?
         (let [res (action)]
           (condp apply [res]
-            keyword? (a/put! chan [:next res i])
+            keyword? (a/put! main [:next res i])
             vector? (doseq [msg [(into [:add] res)
                                  [:next (ffirst res) i]]]
-                      (a/put! chan msg))
+                      (a/put! main msg))
             string? (let [item (* 2 i)]
-                      (a/put! chan [:put 
+                      (a/put! main [:put
                                     [id item (str (get options item) ": " res)]
                                     [id (inc item) (constantly nil)]]))
-            channel? (a/pipe res chan false)
+            channel? (a/pipe res main false)
             nil? nil
             widget? (do (.detach widget) res)))
         ((:dispatch cfg) action)))))
 
-(defn create-refresh-fn [widget title-widget chan cfg]
+(defn create-refresh-fn [widget title-widget channels cfg]
   (fn [nav]
     (let [[id title body :as current] (:current nav)
           options
@@ -109,7 +109,7 @@
         (doto widget
           (core/set-items (take-nth 2 options))
           (.select (:pos nav))
-          (.on "select" (create-selection-fn widget current chan cfg))))
+          (.on "select" (create-selection-fn widget current channels cfg))))
       (core/render))
     (dissoc nav :rm-back)))
 
@@ -123,22 +123,25 @@
                                                 (if title [0] [1 place])) fix)
                               n)]
                      (if (= id current-id)
-                       (-> (assoc n' :dirty true)
+                       (-> (assoc n' :current-is-dirty true)
                            (assoc-in (cons :current
                                            (if title [1] [2 place])) fix))
                        n')))
                  nav args)
-        n (dissoc new-nav :dirty)]
-    (if (:dirty new-nav) (refresh n) n)))
+        n (dissoc new-nav :current-is-dirty)]
+    (if (:current-is-dirty new-nav) (refresh n) n)))
 
-(defn hop [nav-entry pos nav chan refresh]
-  (let [id (first nav-entry)]
-    (-> (assoc nav
+(defn hop [nav-entry pos nav {:keys [main flush]} refresh]
+  (let [id (first nav-entry)
+        n (if (and flush (get-in nav [:dirty id]))
+            (do (a/put! flush id) (assoc-in nav [:dirty id] false))
+            nav)]
+    (-> (assoc n
           :pos pos
           :current nav-entry
-          :rm-back (:back nav)
-          :back (when-let [parent (get-in nav [:hierarchy :links id])]
-                  #(a/put! chan [:set (:nav-entry parent) (:pos parent)])))
+          :rm-back (:back n)
+          :back (when-let [parent (get-in n [:links id])]
+                  #(a/put! main [:set (:nav-entry parent) (:pos parent)])))
         refresh)))
 
 (def config-default
@@ -151,9 +154,9 @@
   ([current hierarchy widget]
      (create-pane current hierarchy widget config-default))
   ([[id title body :as current] hierarchy widget cfg]
-     (let [chan (or (:chan cfg) (a/chan))
+     (let [channels (assoc (:watches cfg) :main (or (:chan cfg) (a/chan)))
            title-widget (core/create-text {:left 2 :content title})
-           refresh (create-refresh-fn widget title-widget chan cfg)] 
+           refresh (create-refresh-fn widget title-widget channels cfg)] 
        (.prepend widget title-widget)
        (a/reduce
         (fn [nav [cmd & args]]
@@ -165,27 +168,32 @@
                 nav
                 (hop (into [id] dest) 0
                      (-> (assoc nav :pos current-pos)
-                         (assoc-in [:hierarchy :links id]
+                         (assoc-in [:links id]
                                    {:nav-entry (:current nav)
                                     :pos current-pos}))
-                     chan refresh)))
+                     channels refresh)))
             :hop
             (let [[id p] args
                   dest (get-in nav [:hierarchy id])]
               (if-not dest
                 nav
-                (hop (into [id] dest) (or p 0) nav chan refresh)))
+                (hop (into [id] dest) (or p 0) nav channels refresh)))
             :set
-            (let [[nav-entry p] args] (hop nav-entry p nav chan refresh))
-            :add
-            (reduce (fn [n [id & more]]
-                      (assoc-in n [:hierarchy id] (vec more)))
-                    nav args)
+            (let [[nav-entry p] args] (hop nav-entry p nav channels refresh))
             :fix (change nav args refresh :persist)
-            :put (change nav args refresh false)))
+            :put (change nav args refresh false)
+            :add
+            (reduce (fn [n [id & more]] (assoc-in n [:hierarchy id] (vec more)))
+                    nav args)
+            :stub
+            (reduce (fn [n [id & more]]
+                      (-> (assoc-in n [:dirty id] true)
+                          (assoc-in [:hierarchy id] (vec more))))
+                    nav args)
+            :dirty (assoc-in nav [:dirty (first args)] true)))
         {:current current :pos 0 :hierarchy hierarchy}
-        chan)
-       (a/put! chan [:hop id]))
+        (:main channels))
+       (a/put! (:main channels) [:hop id]))
      widget))
 
 (defn navigation
