@@ -11,8 +11,8 @@ FIXME
 The navigation widget is a very high-level, declarative way to build
 list-based interfaces. The abstraction is that of interconnected menu
 screens, which can nonetheless be far more interactive and
-programmatic than a menu would normally be, hence the more general
-term 'navigation'.
+programmatic than a menu would normally be, thus the more general term
+'navigation'.
 
 It allows for UIs that are asynchronous, lazy and responsive through
 the use of a simple core.async messaging protocol. It all starts with
@@ -28,13 +28,60 @@ even as they're accepted asynchronously.
 
 **** Operations
 
+***** :next
+
+Takes the id of the screen to go next as first argument.
+
+=:next= messages are the standard way to navigate the interface,
+because it saves a link so you can go back to the previous screen. It
+also optionally takes the list position in the current screen (default
+to =0= if not supplied.), so that when going back you end up in the
+position you left, which is very natural and even expected behavior in
+navigation screens.
+
+The third--also optional--argument is the list position to go to in
+the next screen, defaulting to =0= as well. Going to a specific
+position might be useful e.g. you're jumping to some search result.
+
+***** :hop
+
+This is like =:next=, except it doesn't save a link to go back to, and
+so it doesn't take =:next='s current position argument, instead taking
+an optional position to go to as second and last argument. This also
+makes it useful for hopping to another position within the same
+screen.
+
+Note that when using =:next= the new link created overwrites the
+former link, since there can only be one meaning when you
+press *back*. Here there's no overwriting, so if you hop to a random
+screen, you might be able to back into a former connection that was
+made to it when =:next= was used. This is precisely what happens in
+the action of going back itself, which uses =:hop= for its internal
+implementation. This allows you to go next many screens and then be
+able to go all the way back.
+
+***** :set
+
+This is like =:hop=, except that instead of taking a screen id as
+first argument, it takes a full nav-entry--that is, a vector with
+three elements: the id, the title and a body. This can be useful for
+setting the interface to a temporary screen with a dummy id that won't
+go into the hierarchy.
+
+In reality I was lying and =:hop= is not used internally to implement
+the action of going back screens. It's =:set= that's used, because
+when a link is saved, the whole nav-entry is copied there, which
+allows local, temporary state to be preserved for when you go back.
+The =:set= command can be used for similar effect.
+
 ***** :dirty
 
-Dirtying is exclusively for the external user, to facilitate his
-keeping track of which parts of the hierarchy will have to be lazily
-recomputed, if at all, when they're finally accessed--this is coupled
-with passing a =:flush= channel inside the =cfg= parameter's
-=:watches= property, on which to listen to flush messages.
+Takes the id of the screen to be made dirty. Dirtying is exclusively
+for the external user, to facilitate his keeping track of which parts
+of the hierarchy will have to be lazily recomputed, if at all, when
+they're finally accessed--this is coupled with passing a =:flush=
+channel inside the =cfg= parameter's =:watches= property, on which to
+listen to flush messages.
 
 Even though dirtying could be managed externally by the user, building
 it into the navigation loop takes care of a few things for you:

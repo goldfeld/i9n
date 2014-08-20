@@ -162,24 +162,26 @@
         (fn [nav [cmd & args]]
           (case cmd
             :next
-            (let [[id current-pos] args
+            (let [[id pos go-to] args
+                  current-pos (or pos 0)
                   dest (get-in nav [:hierarchy id])]
               (if-not dest
                 nav
-                (hop (into [id] dest) 0
+                (hop (into [id] dest) (or go-to 0)
                      (-> (assoc nav :pos current-pos)
                          (assoc-in [:links id]
                                    {:nav-entry (:current nav)
                                     :pos current-pos}))
                      channels refresh)))
             :hop
-            (let [[id p] args
+            (let [[id go-to] args
                   dest (get-in nav [:hierarchy id])]
               (if-not dest
                 nav
-                (hop (into [id] dest) (or p 0) nav channels refresh)))
+                (hop (into [id] dest) (or go-to 0) nav channels refresh)))
             :set
-            (let [[nav-entry p] args] (hop nav-entry p nav channels refresh))
+            (let [[nav-entry go-to] args]
+              (hop nav-entry (or go-to 0) nav channels refresh))
             :fix (change nav args refresh :persist)
             :put (change nav args refresh false)
             :add
