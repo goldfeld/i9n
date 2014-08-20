@@ -89,7 +89,7 @@
             widget? (do (.detach widget) res)))
         ((:dispatch cfg) action)))))
 
-(defn create-refresh-fn [widget chan cfg]
+(defn create-refresh-fn [widget title-widget chan cfg]
   (fn [nav]
     (let [[id title body :as current] (:current nav)
           options
@@ -101,12 +101,10 @@
                       nil)
             body)
           left-binds (-> cfg :key-binds :left)]
-      (when-let [old-title (first (.-children widget))] (.detach old-title))
       (when-let [rm (:rm-back nav)] (core/unset-key widget left-binds rm))
       (when-let [back (:back nav)] (core/set-key-once widget left-binds back))
-      (doto widget
-        (core/set-title title)
-        (.removeAllListeners "select"))
+      (.setContent title-widget title)
+      (.removeAllListeners widget "select")
       (when options 
         (doto widget
           (core/set-items (take-nth 2 options))
@@ -154,7 +152,9 @@
      (create-pane current hierarchy widget config-default))
   ([[id title body :as current] hierarchy widget cfg]
      (let [chan (or (:chan cfg) (a/chan))
-           refresh (create-refresh-fn widget chan cfg)] 
+           title-widget (core/create-text {:left 2 :content title})
+           refresh (create-refresh-fn widget title-widget chan cfg)] 
+       (.prepend widget title-widget)
        (a/reduce
         (fn [nav [cmd & args]]
           (case cmd
