@@ -1,0 +1,55 @@
+* enlightened
+
+A Clojure library designed to ... well, that part is up to you.
+
+** Usage
+
+FIXME
+
+*** Navigation
+
+The navigation widget is a very high-level, declarative way to build
+list-based interfaces. The abstraction is that of interconnected menu
+screens, which can nonetheless be far more interactive and
+programmatic than a menu would normally be, hence the more general
+term 'navigation'.
+
+It allows for UIs that are asynchronous, lazy and responsive through
+the use of a simple core.async messaging protocol. It all starts with
+passing a channel within the =cfg= parameter (a map), through its
+=:chan= property. If that is not supplied, the navigation widget will
+create its own channel internally which then won't be accessible to
+the user.
+
+This channel serves as the backbone of the navigation widget's loop,
+as every operation (adding and modifying screens, moving from screen
+to screen, among other more meta commands) is processed sequentially,
+even as they're accepted asynchronously.
+
+**** Operations
+
+***** :dirty
+
+Dirtying is exclusively for the external user, to facilitate his
+keeping track of which parts of the hierarchy will have to be lazily
+recomputed, if at all, when they're finally accessed--this is coupled
+with passing a =:flush= channel inside the =cfg= parameter's
+=:watches= property, on which to listen to flush messages.
+
+Even though dirtying could be managed externally by the user, building
+it into the navigation loop takes care of a few things for you:
+
+ 1. a flush notification is sent out when a dirty screen is finally
+    accessed, after first clearing the screen's dirty status;
+
+ 2. you can send in =:stub= messages, which are just like =:add=
+    messages, except that the screen is created dirty, which means you
+    lazily create just a stub, and wait for a flush message to finish
+    building the screen only when it's first needed.
+
+** License
+
+Copyright © 2014 Vic Goldfeld
+
+Distributed under the Eclipse Public License either version 1.0 or (at
+your option) any later version.
