@@ -172,16 +172,17 @@
           (case cmd
             :next
             (let [[id pos go-to] args
+                  current (:current nav)
                   current-pos (or pos 0)
                   dest (get-in nav [:hierarchy id])]
-              (if-not dest
-                nav
+              (if (and dest (not= id (first current)))
                 (hop (into [id] dest) (or go-to 0)
                      (-> (assoc nav :pos current-pos)
                          (assoc-in [:links id]
-                                   {:nav-entry (:current nav)
+                                   {:nav-entry current
                                     :pos current-pos}))
-                     channels refresh)))
+                     channels refresh)
+                nav))
             :hop
             (let [[id go-to] args
                   dest (get-in nav [:hierarchy id])]
