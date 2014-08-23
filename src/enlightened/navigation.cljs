@@ -119,16 +119,23 @@
 (defn apply-fix
   "Applies a surgical fix to a nav-entry or hierarchy entry, where the
   distinction between the two is made by supplying the proper indexes
-  of title & body within the entry vector. If the entry's body is not
-  a vector, first overwrite it with an empty vector, and then apply
-  the fix to that--this has to assume that whatever originated this
-  fix has assimilated the non-vector body, since it will be lost."
+  of title & body within the entry vector. If the entry's body has
+  fewer elements than the 'place' where the fix goes, fill with nil
+  elements. If the entry's body is not a vector, first overwrite it
+  with a sparse vector, and then apply the fix to that--this has to
+  assume that whatever originated this fix has assimilated the
+  non-vector body, since it will be lost."
   [nav path place title-idx body-idx fix]
   (if (= place :title)
     (assoc-in nav (conj path title-idx) fix)
     (let [bpath (conj path body-idx)
           body (get-in nav bpath)]
-      (assoc-in nav bpath (assoc (if (vector? body) body [])
+      (assoc-in nav bpath (assoc (if (vector? body)
+                                   (let [diff (- place (count body))]
+                                     (if (> diff 0)
+                                       (into body (repeat diff nil))
+                                       body))
+                                   (vec (repeat place nil)))
                             place fix)))))
 
 (defn change
