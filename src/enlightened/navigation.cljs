@@ -90,23 +90,22 @@
         ((:dispatch cfg) action)))))
 
 (defn create-refresh-fn [widget title-widget channels cfg]
-  (fn [nav]
-    (let [[id title b :as current] (:current nav)
+  (fn [{back :back rm-back :rm-back [id title bd :as current] :current :as nav}]
+    (let [l-binds (-> cfg :key-binds :left)
           parse-body
           (fn [body]
             (condp apply [body]
-              string? (let [text (create-text-viewer! widget body)]
-                        (core/set-key-once
-                         text (-> cfg :key-binds :left)
-                         #(do (.detach text) (when-let [bk (:back nav)] (bk))))
+              vector? body
+              string? (let [t (create-text-viewer! widget body)
+                            b (or back (constantly nil))]
+                        (core/set-key-once t l-binds #(do (.detach t) (b)))
                         nil)
               channel? (do (a/pipe body (:in channels) false) nil)
               fn? (recur (body))
-              body))
-          options (parse-body b)
-          left-binds (-> cfg :key-binds :left)]
-      (when-let [rm (:rm-back nav)] (core/unset-key widget left-binds rm))
-      (when-let [back (:back nav)] (core/set-key-once widget left-binds back))
+              nil))
+          options (parse-body bd)]
+      (when back (core/set-key-once widget l-binds back))
+      (when rm-back (core/unset-key widget l-binds rm-back))
       (.setContent title-widget title)
       (.removeAllListeners widget "select")
       (when options 
