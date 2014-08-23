@@ -1,4 +1,4 @@
-(defproject longstorm/enlightened "0.2.2"
+(defproject longstorm/enlightened "0.2.3"
   :description "Fast interactive terminal (curses) UIs with cljs and nodejs."
   :url "https://github.com/longstorm/enlightened"
   :license {:name "Eclipse Public License"
