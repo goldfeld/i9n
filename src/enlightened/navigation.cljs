@@ -185,8 +185,8 @@
      (create-pane current hierarchy widget config-default))
   ([[id title body :as current] hierarchy widget cfg]
      (let [in (or (:chan cfg) (a/chan))
-           out (a/tap (a/mult in) (a/chan))
-           channels (assoc (:watches cfg) :in in :out out)
+           mult (or (:mult cfg) (a/mult in))
+           channels (assoc (:watches cfg) :in in :mult mult)
            title-widget (core/create-text {:left 2 :content title})
            refresh (create-refresh-fn widget title-widget channels cfg)] 
        (.prepend widget title-widget)
@@ -227,7 +227,7 @@
                     nav args)
             :dirty (assoc-in nav [:dirty (first args)] true)))
         {:current current :pos 0 :hierarchy hierarchy}
-        out)
+        (a/tap mult (a/chan)))
        (a/put! in [:hop id]))
      widget))
 
