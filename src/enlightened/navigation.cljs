@@ -62,29 +62,29 @@
 (defn create-selection-fn
   "Creates the pane/navigation selection fn to be passed to blessed's
   list internals. Here is all the logic dependant on what type of se"
-  [widget [id title options] {main :main :as channels} cfg]
+  [widget [id title options] {in :in :as channels} cfg]
   (fn [_ i]
-    (let [action (create-action! options i #(a/put! main [:hop id %])
+    (let [action (create-action! options i #(a/put! in [:hop id %])
                                  widget (:key-binds cfg))]
       (condp apply [action]
-        keyword? (a/put! main [:next action i])
+        keyword? (a/put! in [:next action i])
         string? (let [text (create-text-viewer! widget action)]
 
                   [nil text {:remove-text #(do (.detach text) :do-once)}])
 
-        channel? (a/pipe action main false)
+        channel? (a/pipe action in false)
         fn?
         (let [res (action)]
           (condp apply [res]
-            keyword? (a/put! main [:next res i])
+            keyword? (a/put! in [:next res i])
             vector? (doseq [msg [(into [:add] res)
                                  [:next (ffirst res) i]]]
-                      (a/put! main msg))
+                      (a/put! in msg))
             string? (let [item (* 2 i)]
-                      (a/put! main [:put
-                                    [id item (str (get options item) ": " res)]
-                                    [id (inc item) (constantly nil)]]))
-            channel? (a/pipe res main false)
+                      (a/put! in [:put
+                                  [id item (str (get options item) ": " res)]
+                                  [id (inc item) (constantly nil)]]))
+            channel? (a/pipe res in false)
             nil? nil
             widget? (do (.detach widget) res)))
         ((:dispatch cfg) action)))))
@@ -100,7 +100,7 @@
                          text (-> cfg :key-binds :left)
                          #(do (.detach text) (when-let [bk (:back nav)] (bk))))
                         nil)
-              channel? (do (a/pipe body (:main channels) false) nil)
+              channel? (do (a/pipe body (:in channels) false) nil)
               fn? (recur (body))
               body))
           options (parse-body b)
@@ -140,7 +140,7 @@
         n (dissoc new-nav :current-is-dirty)]
     (if (:current-is-dirty new-nav) (refresh n) n)))
 
-(defn hop [nav-entry pos nav {:keys [main flush]} refresh]
+(defn hop [nav-entry pos nav {:keys [in flush]} refresh]
   (let [id (first nav-entry)
         n (if (and flush (get-in nav [:dirty id]))
             (do (a/put! flush id) (assoc-in nav [:dirty id] false))
@@ -150,7 +150,7 @@
           :current nav-entry
           :rm-back (:back n)
           :back (when-let [parent (get-in n [:links id])]
-                  #(a/put! main [:set (:nav-entry parent) (:pos parent)])))
+                  #(a/put! in [:set (:nav-entry parent) (:pos parent)])))
         refresh)))
 
 (def config-default
@@ -163,7 +163,9 @@
   ([current hierarchy widget]
      (create-pane current hierarchy widget config-default))
   ([[id title body :as current] hierarchy widget cfg]
-     (let [channels (assoc (:watches cfg) :main (or (:chan cfg) (a/chan)))
+     (let [in (or (:chan cfg) (a/chan))
+           out (a/tap (a/mult in) (a/chan))
+           channels (assoc (:watches cfg) :in in :out out)
            title-widget (core/create-text {:left 2 :content title})
            refresh (create-refresh-fn widget title-widget channels cfg)] 
        (.prepend widget title-widget)
@@ -204,8 +206,8 @@
                     nav args)
             :dirty (assoc-in nav [:dirty (first args)] true)))
         {:current current :pos 0 :hierarchy hierarchy}
-        (:main channels))
-       (a/put! (:main channels) [:hop id]))
+        out)
+       (a/put! in [:hop id]))
      widget))
 
 (defn navigation
