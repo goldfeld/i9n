@@ -116,7 +116,14 @@
       (core/render))
     (dissoc nav :rm-back)))
 
-(defn apply-fix [nav path place title-idx body-idx fix]
+(defn apply-fix
+  "Applies a surgical fix to a nav-entry or hierarchy entry, where the
+  distinction between the two is made by supplying the proper indexes
+  of title & body within the entry vector. If the entry's body is not
+  a vector, first overwrite it with an empty vector, and then apply
+  the fix to that--this has to assume that whatever originated this
+  fix has assimilated the non-vector body, since it will be lost."
+  [nav path place title-idx body-idx fix]
   (if (= place :title)
     (assoc-in nav (conj path title-idx) fix)
     (let [bpath (conj path body-idx)
@@ -124,7 +131,15 @@
       (assoc-in nav bpath (assoc (if (vector? body) body [])
                             place fix)))))
 
-(defn change [nav args refresh persist?]
+(defn change
+  "Applies :fix or :put operations into a nav. The option between :fix
+  and :put is made by the persist? parameter, which means that a :fix
+  is persisted into the hierarchy, whereas a :put is not. Meanwhile,
+  operations targeting the current nav-entry will effect the
+  temporary-state nav-entry copy, regardless of the persist? param. As
+  such, each operation may in fact be applied to both hierarchy and
+  current entry, to one of the two, or to none at all."
+  [nav args refresh persist?]
   (let [current-id (-> nav :current first)
         new-nav (reduce
                  (fn [n [id place fix]]
