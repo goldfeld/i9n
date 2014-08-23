@@ -9,7 +9,6 @@
 (defn sad-async []
   (let [chan (a/chan)]
     (doto chan
-      (a/put! [:add [:hip "aha" ["ha" (fn [] nil)]]])
       (a/put! [:fix [:hip :title "Hop!"]])
       (a/put! [:fix [:hip 0 "to non-async"]])
       (a/put! [:fix [:hip 1 :ho]])
@@ -34,10 +33,12 @@
                 "quit" #(proc/exit)]]
    [:Text "Text" lorem]
    [:Book "Book" ["ch.1" lorem "ch.2" "Second part" "ch.3" "The End"]]
-   [:test "focus" ["sadly asynchronous" #(sad-async)
+   [:test "focus" ["sadly asynchronous" sad-async
+                   "also sad but hip" :hip
                    "sysiphus" #(navigation-view (nav))
                    "jit" (fn [] [[:new "Menu" ["a" :ho "d" :d]]
                                  [:d "d" ["a" :ho]]])]]
+   [:hip "" sad-async]
    [:ho "go" ["hum" (constantly "sad")]]])
 
 (defn -main [& input]
