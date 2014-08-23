@@ -7,7 +7,7 @@
 (declare create-pane)
 
 (defn create-hierarchy [root-item nav-entries]
-  (reduce (fn [m x] (assoc m (keyword (first x)) (rest x)))
+  (reduce (fn [m x] (assoc m (keyword (first x)) (vec (rest x))))
           {:root root-item} nav-entries))
 
 (defn create-text-viewer!
@@ -117,19 +117,24 @@
       (core/render))
     (dissoc nav :rm-back)))
 
+(defn apply-fix [nav path place title-idx body-idx fix]
+  (if (= place :title)
+    (assoc-in nav (conj path title-idx) fix)
+    (let [bpath (conj path body-idx)
+          body (get-in nav bpath)]
+      (assoc-in nav bpath (assoc (if (vector? body) body [])
+                            place fix)))))
+
 (defn change [nav args refresh persist?]
   (let [current-id (-> nav :current first)
         new-nav (reduce
                  (fn [n [id place fix]]
-                   (let [title (= :title place)
-                         n' (if persist?
-                              (assoc-in n (into [:hierarchy id]
-                                                (if title [0] [1 place])) fix)
+                   (let [n' (if persist?
+                              (apply-fix n [:hierarchy id] place 0 1 fix)
                               n)]
                      (if (= id current-id)
-                       (-> (assoc n' :current-is-dirty true)
-                           (assoc-in (cons :current
-                                           (if title [1] [2 place])) fix))
+                       (-> (apply-fix n' [:current] place 1 2 fix)
+                           (assoc :current-is-dirty true))
                        n')))
                  nav args)
         n (dissoc new-nav :current-is-dirty)]
