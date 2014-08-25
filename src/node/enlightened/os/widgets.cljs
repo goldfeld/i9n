@@ -1,7 +1,7 @@
-(ns enlightened.widgets
+(ns enlightened.os.widgets
   (:refer-clojure :exclude [list])
-  (:require [enlightened.core :as core]
-            [enlightened.framework :as p]))
+  (:require [enlightened.properties :as p]
+            [enlightened.os.term :as term]))
 
 (declare create-args set-args)
 
@@ -26,7 +26,7 @@
   ([widget type title content]
      (let [set-fn (type set-args)]
        (set-fn widget content)
-       (core/set-title widget title))))
+       (term/set-title widget title))))
 
 (defn alert
   ([content] (alert [] content))
@@ -56,13 +56,13 @@
      (let [view (create :wrapper :height "75%")
            widget (create :list)]
        (.append view widget)
-       (core/switch-active-view view widget)
+       (term/switch-active-view view widget)
        widget)))
 
 (defn text
   ([title txt]
      (let [widget (text txt)]
-       (core/set-title widget title)
+       (term/set-title widget title)
        widget))
   ([txt]
      (let [widget (text)]
@@ -75,20 +75,20 @@
         widget (create :text)]
     (.append view widget)
     (.setContent widget text)
-    (core/set-title widget title)
-    (core/switch-active-view view widget)
+    (term/set-title widget title)
+    (term/switch-active-view view widget)
     widget))
 
 (defn create-args [type]
   (case type
-    :list [core/create-list
+    :list [term/create-list
            [p/centered p/half-height p/line-bordered p/interactive-vi]
            {:align "left"
             :width "75%"
             :fg "blue"
             :selectedBg "blue"
             :selectedFg "white"}]
-    :text [core/create-box
+    :text [term/create-box
            [p/interactive-vi]
            {:scrollable true
             :alwaysScroll true
@@ -96,23 +96,23 @@
             :height "80%"
             :top "center"
             :left 5}]
-    :preview [core/create-box
+    :preview [term/create-box
               []
               {:width "75%"
                :height "25%"
                :bottom 0
                :left "center"}]
-    :row [core/create-box [] {:width "100%"}]
-    :wrapper [core/create-box
+    :row [term/create-box [] {:width "100%"}]
+    :wrapper [term/create-box
               []
-              {:parent (core/get-screen)
+              {:parent (term/get-screen)
                :width "100%"
                :height "100%"}]
-    :commandline [core/create-textbox
+    :commandline [term/create-textbox
                   []
                   {:width "100%"
                    :bottom 0
                    :fg "yellow"}]))
 
 (def set-args
-  {:list core/set-items})
+  {:list term/set-items})

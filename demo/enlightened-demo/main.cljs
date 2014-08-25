@@ -3,8 +3,8 @@
             [cljs.core.async :as a]
             [clojure.string :as strng]
             [claude.process :as proc]
-            [enlightened.core :as core]
-            [enlightened.navigation :refer [navigation-view]]))
+            [enlightened.os.term :as term]
+            [enlightened.os.navigation :refer [navigation-view]]))
 
 (defn sad-async []
   (let [chan (a/chan)]
@@ -18,7 +18,7 @@
       (a/put! [:fix [:here 0 "ho"]])
       (a/put! [:next :hip])
       (a/close!))
-    (core/render-deferred)
+    (term/render-deferred)
     chan))
 
 (def lorem
@@ -42,7 +42,7 @@
    [:ho "go" ["hum" (constantly "sad")]]])
 
 (defn -main [& input]
-  (core/bind-global-keys ["C-c"] #(proc/exit))
+  (term/bind-global-keys ["C-c"] #(proc/exit))
   (let [[cmd & args] input]
     (navigation-view (nav))))
 

@@ -5,20 +5,34 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :scm {:name "git"
         :url "https://github.com/longstorm/enlightened.git"}
-  :aliases {"auto" ["do" "clean," "cljsbuild" "auto"]}
+  :aliases {"cleantest" ["do" "clean," "cljsbuild" "once," "test,"]
+            "autotest" ["do" "clean," "cljsbuild" "auto" "test"]}
   :source-paths ["src"]
   :dependencies [[org.clojure/clojure "1.5.1"]
-                 [org.clojure/clojurescript "0.0-2014"]
+                 [org.clojure/clojurescript "0.0-2202"]
                  [longstorm/claude "0.1.4"]]
   :cljsbuild {:builds [{:id "demo"
-                        :source-paths ["src" "demo"]
+                        :source-paths ["src/lib" "src/node" "demo"]
                         :compiler {:target :nodejs
                                    :output-to "resources/public/demo.js"
-                                   :optimizations :simple}}]}
+                                   :optimizations :simple}}
+                       {:id "test"
+                        :source-paths ["src/lib" "test"]
+                        :notify-command ["phantomjs"
+                                         :cljs.test/runner "target/test.js"]
+                        :compiler {:libs [""]
+                                   :output-to "target/test.js"
+                                   :optimizations :whitespace
+                                   :pretty-print true}}]
+              :test-commands {"unit-tests" ["phantomjs" :runner
+                                            "target/test.js"]}}
   :profiles
   {:dev {:dependencies [[org.clojure/core.async "0.1.256.0-1bf8cf-alpha"]
+                        [com.cemerick/double-check "0.5.7-SNAPSHOT"]
                         [org.bodil/redlobster "0.2.1"]]
+         :node-dependencies [[phantomjs "1.9.x"]
+                             [blessed "0.0.29"]]
          :hooks [leiningen.cljsbuild]
-         :plugins [[lein-cljsbuild "1.0.0-alpha2"]
-                   [lein-npm "0.4.0"]]
-         :node-dependencies [[blessed "0.0.29"]]}})
+         :plugins [[lein-cljsbuild "1.0.3"]
+                   [lein-npm "0.4.0"]
+                   [com.cemerick/clojurescript.test "0.3.0"]]}})

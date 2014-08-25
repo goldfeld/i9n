@@ -1,4 +1,4 @@
-(ns enlightened.framework)
+(ns enlightened.properties)
 
 (defn centered [props]
   (assoc props :top "center" :left "center"))

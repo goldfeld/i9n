@@ -1,14 +1,11 @@
-(ns enlightened.navigation
+(ns enlightened.os.navigation
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :as a]
-            [enlightened.core :as core :refer [channel? widget?]]
-            [enlightened.widgets :as widgets]))
+            [enlightened.nav-entry :as nav-entry]
+            [enlightened.os.term :as term :refer [channel? widget?]]
+            [enlightened.os.widgets :as widgets]))
 
 (declare create-pane)
-
-(defn create-hierarchy [root-item nav-entries]
-  (reduce (fn [m x] (assoc m (keyword (first x)) (vec (rest x))))
-          {:root root-item} nav-entries))
 
 (defn create-text-viewer!
   ([pane text]
@@ -17,15 +14,15 @@
        viewer))
   ([pane]
      (let [viewer (widgets/text)]
-       (core/set-items pane [])
+       (term/set-items pane [])
        (.append pane viewer)
        (.focus viewer)
        viewer)))
 
 (defn go-to-book-part [i chan book km key-binds titles parts]
-  (apply core/unset-keys book @km)
+  (apply term/unset-keys book @km)
   (.setContent book (nth parts i))
-  (core/render)
+  (term/render)
   (let [quit (fn [] (a/put! chan [:pos i]) (a/close! chan))
         kmaps [(:quit key-binds) quit
                (:left key-binds)
@@ -37,7 +34,7 @@
                  #(go-to-book-part (inc i) chan book km key-binds titles parts)
                  (constantly nil))]]
     (reset! km kmaps)
-    (apply core/set-keys book kmaps)
+    (apply term/set-keys book kmaps)
     chan))
 
 (defn create-action! [options selection restore-state pane binds]
@@ -55,7 +52,7 @@
                                             (take-nth 2 options) actions)))]
               (.detach book)
               (restore-state (or (:pos res) 0))
-              (core/render-deferred)))
+              (term/render-deferred)))
         nil)
       (nth actions selection))))
 
@@ -98,22 +95,22 @@
               vector? body
               string? (let [t (create-text-viewer! widget body)
                             b (or back (constantly nil))]
-                        (core/set-key-once t l-binds #(do (.detach t) (b)))
+                        (term/set-key-once t l-binds #(do (.detach t) (b)))
                         nil)
               channel? (do (a/pipe body (:in channels) false) nil)
               fn? (recur (body))
               nil))
           options (parse-body bd)]
-      (when back (core/set-key-once widget l-binds back))
-      (when rm-back (core/unset-key widget l-binds rm-back))
+      (when back (term/set-key-once widget l-binds back))
+      (when rm-back (term/unset-key widget l-binds rm-back))
       (.setContent title-widget title)
       (.removeAllListeners widget "select")
       (when options 
         (doto widget
-          (core/set-items (take-nth 2 options))
+          (term/set-items (take-nth 2 options))
           (.select (:pos nav))
           (.on "select" (create-selection-fn widget current channels cfg))))
-      (core/render))
+      (term/render))
     (dissoc nav :rm-back)))
 
 (defn apply-fix
@@ -187,7 +184,7 @@
      (let [in (or (:chan cfg) (a/chan))
            mult (or (:mult cfg) (a/mult in))
            channels (assoc (:watches cfg) :in in :mult mult)
-           title-widget (core/create-text {:left 2 :content title})
+           title-widget (term/create-text {:left 2 :content title})
            refresh (create-refresh-fn widget title-widget channels cfg)] 
        (.prepend widget title-widget)
        (a/reduce
@@ -238,7 +235,7 @@
      (let [{entries :xs
             root :x} (group-by #(if (= 2 (count %)) :x :xs) nav-entries)]
        (create-pane (cons :root (first root))
-                    (create-hierarchy (first root) entries)
+                    (nav-entry/create-hierarchy (first root) entries)
                     list (merge config-default cfg)))))
 
 (defn navigation-view

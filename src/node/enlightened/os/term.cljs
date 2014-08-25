@@ -1,4 +1,4 @@
-(ns enlightened.core
+(ns enlightened.os.term
   (:require [cljs.nodejs :as node]
             [cljs.core.async.impl.protocols :refer [Channel]]))
 
