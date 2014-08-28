@@ -101,8 +101,8 @@
               fn? (recur (body))
               nil))
           options (parse-body bd)]
-      (when back (term/set-key-once widget l-binds back))
       (when rm-back (term/unset-key widget l-binds rm-back))
+      (when back (term/set-key-once widget l-binds back))
       (.setContent title-widget title)
       (.removeAllListeners widget "select")
       (when options 
