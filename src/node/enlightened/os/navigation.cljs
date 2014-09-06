@@ -2,7 +2,8 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :as a]
             [enlightened.nav-entry :as nav-entry]
-            [enlightened.os.term :as term :refer [channel? widget?]]
+            [enlightened.more :refer [channel?]]
+            [enlightened.os.term :as term :refer [widget?]]
             [enlightened.os.widgets :as widgets]))
 
 (declare create-pane)
@@ -113,28 +114,6 @@
       (term/render))
     (dissoc nav :rm-back)))
 
-(defn apply-fix
-  "Applies a surgical fix to a nav-entry or hierarchy entry, where the
-  distinction between the two is made by supplying the proper indexes
-  of title & body within the entry vector. If the entry's body has
-  fewer elements than the 'place' where the fix goes, fill with nil
-  elements. If the entry's body is not a vector, first overwrite it
-  with a sparse vector, and then apply the fix to that--this has to
-  assume that whatever originated this fix has assimilated the
-  non-vector body, since it will be lost."
-  [nav path place title-idx body-idx fix]
-  (if (= place :title)
-    (assoc-in nav (conj path title-idx) fix)
-    (let [bpath (conj path body-idx)
-          body (get-in nav bpath)]
-      (assoc-in nav bpath (assoc (if (vector? body)
-                                   (let [diff (- place (count body))]
-                                     (if (> diff 0)
-                                       (into body (repeat diff nil))
-                                       body))
-                                   (vec (repeat place nil)))
-                            place fix)))))
-
 (defn change
   "Applies :fix or :put operations into a nav. The option between :fix
   and :put is made by the persist? parameter, which means that a :fix
@@ -146,12 +125,14 @@
   [nav args refresh persist?]
   (let [current-id (-> nav :current first)
         new-nav (reduce
-                 (fn [n [id place fix]]
-                   (let [n' (if persist?
-                              (apply-fix n [:hierarchy id] place 0 1 fix)
+                 (fn [n [id place & fix]]
+                   (let [apply-fix (nav-entry/create-fix place fix)
+                         n' (if persist?
+                              (apply-fix n [:hierarchy id :data 0]
+                                         [:hierarchy id :data 1])
                               n)]
                      (if (= id current-id)
-                       (-> (apply-fix n' [:current] place 1 2 fix)
+                       (-> (apply-fix n' [:current 1] [:current 2])
                            (assoc :current-is-dirty true))
                        n')))
                  nav args)
@@ -160,14 +141,14 @@
 
 (defn hop [nav-entry pos nav {:keys [in flush]} refresh]
   (let [id (first nav-entry)
-        n (if (and flush (get-in nav [:dirty id]))
-            (do (a/put! flush id) (assoc-in nav [:dirty id] false))
+        n (if (and flush (get-in nav [:hierarchy id :dirty]))
+            (do (a/put! flush id) (assoc-in nav [:hierarchy id :dirty] false))
             nav)]
     (-> (assoc n
           :pos pos
           :current nav-entry
-          :rm-back (:back n)
-          :back (when-let [parent (get-in n [:links id])]
+          :rm-back (:back nav)
+          :back (when-let [parent (get-in n [:hierarchy id :link])]
                   #(a/put! in [:set (:nav-entry parent) (:pos parent)])))
         refresh)))
 
@@ -194,18 +175,18 @@
             (let [[id pos go-to] args
                   current (:current nav)
                   current-pos (or pos 0)
-                  dest (get-in nav [:hierarchy id])]
+                  dest (get-in nav [:hierarchy id :data])]
               (if (and dest (not= id (first current)))
                 (hop (into [id] dest) (or go-to 0)
                      (-> (assoc nav :pos current-pos)
-                         (assoc-in [:links id]
+                         (assoc-in [:hierarchy id :link]
                                    {:nav-entry current
                                     :pos current-pos}))
                      channels refresh)
                 nav))
             :hop
             (let [[id go-to] args
-                  dest (get-in nav [:hierarchy id])]
+                  dest (get-in nav [:hierarchy id :data])]
               (if-not dest
                 nav
                 (hop (into [id] dest) (or go-to 0) nav channels refresh)))
@@ -215,14 +196,15 @@
             :fix (change nav args refresh :persist)
             :put (change nav args refresh false)
             :add
-            (reduce (fn [n [id & more]] (assoc-in n [:hierarchy id] (vec more)))
+            (reduce (fn [n [id & more]]
+                      (assoc-in n [:hierarchy id :data] (vec more)))
                     nav args)
             :stub
             (reduce (fn [n [id & more]]
-                      (-> (assoc-in n [:dirty id] true)
-                          (assoc-in [:hierarchy id] (vec more))))
+                      (-> (assoc-in n [:hierarchy id :dirty] true)
+                          (assoc-in [:hierarchy id :data] (vec more))))
                     nav args)
-            :dirty (assoc-in nav [:dirty (first args)] true)))
+            :dirty (assoc-in nav [:hierarchy (first args) :dirty] true)))
         {:current current :pos 0 :hierarchy hierarchy}
         (a/tap mult (a/chan)))
        (a/put! in [:hop id]))

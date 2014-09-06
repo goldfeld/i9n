@@ -45,9 +45,9 @@ position might be useful e.g. you're jumping to some search result.
 
 ***** :hop
 
-This is like =:next=, except it doesn't save a link to go back to, and
-so it doesn't take =:next='s current position argument, instead taking
-an optional position to go to as second and last argument. This also
+Like =:next=, except it doesn't save a link to go back to, and so it
+doesn't take =:next='s current position argument, instead taking an
+optional position to go to as second and last argument. This also
 makes it useful for hopping to another position within the same
 screen.
 
@@ -62,11 +62,11 @@ able to go all the way back.
 
 ***** :set
 
-This is like =:hop=, except that instead of taking a screen id as
-first argument, it takes a full nav-entry--that is, a vector with
-three elements: the id, the title and a body. This can be useful for
-setting the interface to a temporary screen with a dummy id that won't
-go into the hierarchy.
+Like =:hop=, except that instead of taking a screen id as first
+argument, it takes a full nav-entry--that is, a vector with three
+elements: the id, the title and a body. This can be useful for setting
+the interface to a temporary screen with a dummy id that won't go into
+the hierarchy.
 
 In reality I was lying and =:hop= is not used internally to implement
 the action of going back screens. It's =:set= that's used, because
@@ -74,10 +74,76 @@ when a link is saved, the whole nav-entry is copied there, which
 allows local, temporary state to be preserved for when you go back.
 The =:set= command can be used for similar effect.
 
+***** :fix
+
+Updates nav-entries as surgically as you need, taking care to apply
+your fixes both in the hierarchy (i.e. persist the changes) and in any
+temporary state such as the user's current screen. It can be used to
+replace, add or remove an option or part of it. Takes the id of the
+screen to change as first argument, the =place= (where to change) as
+second, and what to change as rest arguments.
+
+****** =place= syntax
+
+The most basic =place= designation is an integer (equal or greater
+than zero--with a negative number the fix operation will be ignored),
+which signifies a fix *starting* from that index. That means if you
+give it =4= as the place and then supply four following arguments in
+the =:fix= operation, the option starting at index =4= as well as the
+one starting at index =6= will be changed--or added if those indexes
+didn't exist.
+
+The only way to change the title of an entry, as opposed to the
+options of its body, is to use =:title= as the place. The table below
+features other keywords accepted as a place. Note that *option* means
+a pair of elements (label and action) from the body's vector, so
+/option 3/ would start at index 6 and end at index 7.
+
+| keyword        | place meaning                                              |
+|----------------+------------------------------------------------------------|
+| =:last=        | Last option's label, i.e. last /even/ index                |
+| =:last-action= | Last option's action, i.e. very last index                 |
+| =:pop=         | Removes the last option, takes no argument after the place |
+| =:append=      | Adds after the last option                                 |
+| =:prepend=     | Adds before the first option                               |
+
+The append and prepend keywords above are useful in that they always
+add new stuff, but what about adding to the middle of the list? The
+next table shows vector-based place syntax, allowing you to do that
+and other hopefully helpful things.
+
+| syntax                  | place meaning                                      |
+|-------------------------+----------------------------------------------------|
+| =[:insert n]=           | Adds before the start of option =n=                |
+| =[:insert-after & xs]=  | Adds after option matching any of elements =xs=    |
+| =[:insert-before & xs]= | Adds before option matching any of elements =xs=   |
+| =[:action n]=           | Changes action(s) of option(s) starting from /n/   |
+| =[:label n]=            | Changes label(s) of option(s) starting from /n/    |
+| =[:action-find & xs]=   | Like =:action= but from first matching any of =xs= |
+| =[:label-find & xs]=    | Like =:label= but from first matching any of =xs=  |
+| =[:from & xs]=          | Replaces from first option matching any of =xs=    |
+| =[:after n & xs]=       | Like =:from= but starts /n/ options after          |
+| =[:before n & xs]=      | Like =:from= but starts /n/ options before         |
+| =[:shrink n start]=     | Remove /n/ options from option /start/             |
+| =[:remove n & xs]=      | Remove /n/ options from first matching any of =xs= |
+
+When there are several needles =xs= from which to find a matching
+result in the haystack, each needle is first searched over the whole
+haystack before trying the next one. Trying needles is less dangerous
+than it sounds.
+
+***** :put
+
+Takes all the same arguments as =:fix=, but doesn't persist the fix
+into the hierarchy. Thus, the fix is only applied to temporary state
+nav-entries, such as the one representing the user's current screen.
+If there is no such temporary state target where to apply the fix,
+nothing is done by the =:put= operation.
+
 ***** :dirty
 
 Takes the id of the screen to be made dirty. Dirtying is exclusively
-for the external user, to facilitate his keeping track of which parts
+for the library user, to facilitate his keeping track of which parts
 of the hierarchy will have to be lazily recomputed, if at all, when
 they're finally accessed--this is coupled with passing a =:flush=
 channel inside the =cfg= parameter's =:watches= property, on which to
@@ -93,6 +159,19 @@ it into the navigation loop takes care of a few things for you:
     messages, except that the screen is created dirty, which means you
     lazily create just a stub, and wait for a flush message to finish
     building the screen only when it's first needed.
+    
+***** :column
+
+Allows setting properties of columnar data in a given screen. Takes
+the id of the screen as first argument and the integer index of the
+column as second. The rest of the arguments should consist of pairs of
+keyword and value (keyword arguments). All arguments are optional. The
+keywords accepted are:
+
+| keyword  | arguments type | description                                     |
+|----------+----------------+-------------------------------------------------|
+| =:width= | int            | Always keep col width at this character length. |
+| =:sort=  | (fn [a b])     | Sort table by this col, using supplied fn.      |
 
 ** License
 

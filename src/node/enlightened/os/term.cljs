@@ -1,6 +1,5 @@
 (ns enlightened.os.term
-  (:require [cljs.nodejs :as node]
-            [cljs.core.async.impl.protocols :refer [Channel]]))
+  (:require [cljs.nodejs :as node]))
 
 (def get-blessed (memoize #(node/require "blessed")))
 (def get-screen (memoize #(.screen (get-blessed))))
@@ -22,12 +21,6 @@
        (doseq [[k f] (partition 2 args)]
          (.key screen (clj->js k) f)))))
 
-(defn channel? [x]
-  (satisfies? Channel x))
-
-(defn widget? [x]
-  (.hasOwnProperty x "screen"))
-
 (defn switch-active-view
   ([new-active main-widget]
      (.focus main-widget)
@@ -40,6 +33,9 @@
        (.setFront new-active)
        (render)
        new-active)))
+
+(defn widget? [x]
+  (.hasOwnProperty x "screen"))
     
 (defn create-widget
   [widget-fn mods props overrides]

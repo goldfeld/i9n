@@ -12,7 +12,10 @@
                              [[:a "a" "some text"]
                               [:b "b" ["c" :c]]
                               [:c "c" "other text"]])
-         {:root ["menu" ["a" :a "b" :b]]
-          :a ["a" "some text"]
-          :b ["b" ["c" :c]]
-          :c ["c" "other text"]})))
+         {:root {:data ["menu" ["a" :a "b" :b]]}
+          :a {:data ["a" "some text"]}
+          :b {:data ["b" ["c" :c]]}
+          :c {:data ["c" "other text"]}})))
+
+(deftest fill-body-test
+  (is (= [1 2 3 nil nil nil] (n/fill-body [1 2 3] 2 4))))
