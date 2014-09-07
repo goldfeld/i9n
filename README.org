@@ -140,14 +140,23 @@ nav-entries, such as the one representing the user's current screen.
 If there is no such temporary state target where to apply the fix,
 nothing is done by the =:put= operation.
 
+***** :select
+
+Example: =(a/put! in [:select 2])=
+
+Select option at index /n/ in whatever screen is the current. Accepts
+=:last= as an index.
+
 ***** :dirty
 
-Takes the id of the screen to be made dirty. Dirtying is exclusively
-for the library user, to facilitate his keeping track of which parts
-of the hierarchy will have to be lazily recomputed, if at all, when
-they're finally accessed--this is coupled with passing a =:flush=
-channel inside the =cfg= parameter's =:watches= property, on which to
-listen to flush messages.
+Example: =(a/put! in [:dirty :screen1 :screen4])=
+
+Takes the id(s) of the screen(s) to be made dirty. Dirtying is
+exclusively for the library user, to facilitate his keeping track of
+which parts of the hierarchy will have to be lazily recomputed, if at
+all, when they're finally accessed--this is coupled with passing a
+=:flush= channel inside the =cfg= parameter's =:watches= property, on
+which to listen to flush messages.
 
 Even though dirtying could be managed externally by the user, building
 it into the navigation loop takes care of a few things for you:
@@ -160,6 +169,18 @@ it into the navigation loop takes care of a few things for you:
     lazily create just a stub, and wait for a flush message to finish
     building the screen only when it's first needed.
     
+***** :state
+
+Example: =(a/put! in [:state :user-setting1 :foo :user-setting2 :bar])=
+
+Use for any application-specific state that you need to keep between
+screens--globally in fact, stored within the =nav= object as a map
+under the =:state= key.
+
+Built-in user-facing facilities may interact with state to make the
+use of state easier and more high-level than sending =:state=
+messages; see =enlightened.os.navigation/pick-option= for example.
+
 ***** :column
 
 Allows setting properties of columnar data in a given screen. Takes
