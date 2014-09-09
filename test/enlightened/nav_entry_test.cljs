@@ -7,15 +7,16 @@
             [cemerick.double-check.generators :as gen]
             [cemerick.double-check.properties :as prop :include-macros true]))
 
-(deftest create-hierarchy-simple-test
-  (is (= (n/create-hierarchy ["menu" ["a" :a "b" :b]]
-                             [[:a "a" "some text"]
-                              [:b "b" ["c" :c]]
-                              [:c "c" "other text"]])
-         {:root {:data ["menu" ["a" :a "b" :b]]}
-          :a {:data ["a" "some text"]}
-          :b {:data ["b" ["c" :c]]}
-          :c {:data ["c" "other text"]}})))
+(deftest create-nav-simple-test
+  (is (= (n/create-nav ["menu" ["a" :a "b" :b]]
+                       [[:a "a" "some text"]
+                        [:b "b" ["c" :c]]
+                        [:c "c" "other text"]])
+         {:hierarchy
+          {:root {:data ["menu" ["a" :a "b" :b]]}
+           :a {:data ["a" "some text"]}
+           :b {:data ["b" ["c" :c]]}
+           :c {:data ["c" "other text"]}}})))
 
 (deftest fill-body-test
   (is (= [1 2 3 nil nil nil] (n/fill-body [1 2 3] 2 4))))

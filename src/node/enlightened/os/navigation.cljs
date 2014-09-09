@@ -153,12 +153,16 @@
   (let [id (first nav-entry)
         n (if (and flush (get-in nav [:hierarchy id :dirty]))
             (do (a/put! flush id) (assoc-in nav [:hierarchy id :dirty] false))
-            nav)]
-    (-> (assoc n
+            nav)
+        n' (if-let [trigger (get-in n [:hierarchy id :trigger])]
+             (do (trigger id in)
+                 (update-in n [:hierarchy id] dissoc :trigger))
+             n)]
+    (-> (assoc n'
           :pos pos
           :current nav-entry
-          :rm-back (:back nav)
-          :back (when-let [parent (get-in n [:hierarchy id :link])]
+          :rm-back (:back n')
+          :back (when-let [parent (get-in n' [:hierarchy id :link])]
                   #(a/put! in [:set (:nav-entry parent) (:pos parent)])))
         refresh)))
 
@@ -169,9 +173,9 @@
                :right ["l" "right"]}})
 
 (defn create-pane
-  ([current hierarchy widget]
-     (create-pane current hierarchy widget config-default))
-  ([[id title body :as current] hierarchy widget cfg]
+  ([current initial-nav widget]
+     (create-pane current initial-nav widget config-default))
+  ([[id title body :as current] initial-nav widget cfg]
      (let [in (or (:chan cfg) (a/chan))
            mult (or (:mult cfg) (a/mult in))
            channels (assoc (:watches cfg) :in in :mult mult)
@@ -205,15 +209,9 @@
               (hop nav-entry (or go-to 0) nav channels refresh))
             :fix (change nav args refresh :persist)
             :put (change nav args refresh false)
-            :add
-            (reduce (fn [n [id & more]]
-                      (assoc-in n [:hierarchy id :data] (vec more)))
-                    nav args)
-            :stub
-            (reduce (fn [n [id & more]]
-                      (-> (assoc-in n [:hierarchy id :dirty] true)
-                          (assoc-in [:hierarchy id :data] (vec more))))
-                    nav args)
+            :add (nav-entry/add-to-hierarchy nav args)
+            :stub (nav-entry/add-to-hierarchy
+                   nav args #(assoc-in %1 [:hierarchy %2 :dirty] true))
             :select (let [i (first args)]
                       (.select widget (if (= :last i)
                                         (-> nav :current (nth 2) count)
@@ -222,7 +220,7 @@
                              (assoc-in nav [:hierarchy id :dirty] true))
                            nav args)
             :state (update-in nav [:state] merge (apply hash-map args))))
-        {:current current :pos 0 :hierarchy hierarchy}
+        (assoc initial-nav :current current :pos 0)
         (a/tap mult (a/chan)))
        (a/put! in [:hop id]))
      widget))
@@ -234,7 +232,7 @@
      (let [{entries :xs
             root :x} (group-by #(if (= 2 (count %)) :x :xs) nav-entries)]
        (create-pane (cons :root (first root))
-                    (nav-entry/create-hierarchy (first root) entries)
+                    (nav-entry/create-nav (first root) entries)
                     list (merge config-default cfg)))))
 
 (defn navigation-view

@@ -2,9 +2,24 @@
   "Pure, testable helpers for enlightnened.navigation"
   (:require [enlightened.more :refer [index-of splice replace-at-indexes]]))
 
-(defn create-hierarchy [root-item nav-entries]
-  (reduce (fn [m x] (assoc m (keyword (first x)) {:data (vec (rest x))}))
-          {:root {:data root-item}} nav-entries))
+(defn add-to-hierarchy
+  ([nav nav-entries] (add-to-hierarchy nav nav-entries nil))
+  ([nav nav-entries update-in-entry]
+     (reduce (fn [n [raw-id title & args]]
+               (let [id (keyword raw-id)
+                     has-trigger (= 2 (count args))
+                     n' (if has-trigger
+                          (assoc-in n [:hierarchy id :trigger] (first args))
+                          n)]
+                 (-> (if update-in-entry (update-in-entry n' id) n')
+                     (assoc-in [:hierarchy id :data]
+                               (conj [title] ((if has-trigger second first)
+                                              args))))))
+             nav nav-entries)))
+
+(defn create-nav [root-item nav-entries]
+  (add-to-hierarchy {:hierarchy {:root {:data root-item}}}
+                    nav-entries))
 
 (defn fill-body
   "Prepares an entry's body for a fix by filling with nils as
