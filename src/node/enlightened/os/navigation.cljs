@@ -7,11 +7,11 @@
             [enlightened.os.widgets :as widgets]))
 
 (defmulti custom-nav-action
-  (fn [action-map parse-fn-action nav channels]
+  (fn [action-map i parse-fn-action nav channels]
     (:custom-nav-action action-map)))
 
 (defmethod custom-nav-action :default
-  [action-map parse-fn-action nav channels] nil)
+  [action-map i parse-fn-action nav channels] nil)
 
 (declare create-pane)
 
@@ -45,8 +45,8 @@
     (apply term/set-keys book kmaps)
     chan))
 
-(defn create-action! [options selection restore-state pane binds]
-  (let [actions (take-nth 2 (rest options))]
+(defn create-action! [body selection restore-state pane binds]
+  (let [actions (take-nth 2 (rest body))]
     (if (every? string? actions)
       (let [book (create-text-viewer! pane)
             book-chan (a/chan)]
@@ -57,7 +57,7 @@
                            {}
                            (go-to-book-part selection book-chan book
                                             (atom nil) binds
-                                            (take-nth 2 options) actions)))]
+                                            (take-nth 2 body) actions)))]
               (.detach book)
               (restore-state (or (:pos res) 0))
               (term/render-deferred)))
@@ -67,24 +67,11 @@
 (defn create-selection-fn
   "Creates the pane/navigation selection fn to be passed to blessed's
   list internals. Here is all the logic dependant on what type of se"
-  [widget {[id title options] :current :as nav} {in :in :as channels} cfg]
+  [widget {[id title body] :current :as nav}
+   parse-fn-action {in :in :as channels} cfg]
   (fn [_ i]
-    (let [action (create-action! options i #(a/put! in [:hop id %])
-                                 widget (:key-binds cfg))
-          parse-fn-action
-          (fn [act]
-            (condp apply [act]
-              keyword? (a/put! in [:next act i])
-              sequential? (doseq [msg [(into [:add] act)
-                                       [:next (ffirst act) i]]]
-                            (a/put! in msg))
-              string? (let [item (* 2 i)]
-                        (a/put! in [:put
-                                    [id item (str (get options item) ": " act)]
-                                    [id (inc item) (constantly nil)]]))
-              channel? (a/pipe act in false)
-              nil? nil
-              widget? (do (.detach widget) act)))]
+    (let [action (create-action! body i #(a/put! in [:hop id %])
+                                 widget (:key-binds cfg))]
       (condp apply [action]
         keyword? (a/put! in [:next action i])
         string? (let [text (create-text-viewer! widget action)]
@@ -92,11 +79,14 @@
                   [nil text {:remove-text #(do (.detach text) :do-once)}])
 
         channel? (a/pipe action in false)
-        map? (custom-nav-action action parse-fn-action nav channels)
-        fn? (parse-fn-action (action))
+        map? (custom-nav-action action {:selected i :nav nav
+                                        :channels channels
+                                        :parse-fn-action
+                                        #(parse-fn-action % i id body)})
+        fn? (parse-fn-action (action) i id body)
         ((:dispatch cfg) action)))))
 
-(defn create-refresh-fn [widget title-widget channels cfg]
+(defn create-refresh-fn [widget title-widget parse-fn-action channels cfg]
   (fn [{back :back rm-back :rm-back [id title bd] :current :as nav}]
     (let [l-binds (-> cfg :key-binds :left)
           parse-body
@@ -120,7 +110,8 @@
         (doto widget
           (term/set-items (take-nth 2 options))
           (.select (:pos nav))
-          (.on "select" (create-selection-fn widget nav channels cfg))))
+          (.on "select" (create-selection-fn widget nav parse-fn-action
+                                             channels cfg))))
       (term/render))
     (dissoc nav :rm-back)))
 
@@ -172,6 +163,46 @@
                :left ["h" "left"]
                :right ["l" "right"]}})
 
+(defn update-state [nav state-id state-val]
+  (if-let [{:keys [set deps]} (get-in nav [:hierarchy :state state-id])]
+    (update-in nav [:hierarchy :state state-id :val]
+               (fn [old-val]
+                 (set state-val old-val 
+                      (select-keys (get-in nav [:hierarchy :state]) deps))))
+    (assoc-in nav [:hierarchy :state state-id]
+              {:val state-val
+               :get (fn [val] val)
+               :set (fn [val _ _] val)})))
+
+(defn update-states [nav & id-state-pairs]
+  (reduce (fn [n [state-id state-val]]
+            (if-let [dpdnts (get-in n [:hierarchy :state state-id :dependants])]
+              (reduce (fn [n' dpdt]
+                        (condp apply [dpdt]
+                          fn? (do (dpdt) n')
+                          keyword? (let [d (get-in n' [:hierarchy :state dpdt])]
+                                     (or (and (map? d) (= :eager (:computed d))
+                                              (update-state n' dpdt (:val d)))
+                                         n'))))
+                      (update-state n state-id state-val)
+                      dpdnts)
+              (update-state n state-id state-val)))
+          nav (partition 2 id-state-pairs)))
+
+(defn create-parse-fn-action [in widget]
+  (fn [action i id body]
+    (condp apply [action]
+      keyword? (a/put! in [:next action i])
+      sequential? (do (a/put! in (into [:add] action))
+                      (a/put! in [:next (ffirst action) i]))
+      string? (let [item (* 2 i)]
+                (a/put! in [:put
+                            [id item (str (get body item) ": " action)]
+                            [id (inc item) (constantly nil)]]))
+      channel? (a/pipe action in false)
+      nil? nil
+      widget? (do (.detach widget) action))))
+
 (defn create-pane
   ([current initial-nav widget]
      (create-pane current initial-nav widget config-default))
@@ -180,7 +211,9 @@
            mult (or (:mult cfg) (a/mult in))
            channels (assoc (:watches cfg) :in in :mult mult)
            title-widget (term/create-text {:left 2 :content title})
-           refresh (create-refresh-fn widget title-widget channels cfg)] 
+           parse-fn-action (create-parse-fn-action in widget)
+           refresh (create-refresh-fn widget title-widget
+                                      parse-fn-action channels cfg)]
        (.prepend widget title-widget)
        (a/reduce
         (fn [nav [cmd & args]]
@@ -219,7 +252,12 @@
             :dirty (reduce (fn [n id]
                              (assoc-in nav [:hierarchy id :dirty] true))
                            nav args)
-            :state (update-in nav [:state] merge (apply hash-map args))))
+            :state (apply update-states nav args)
+            :custom-nav-action-with-state
+            (let [[action i action-args] args]
+              (parse-fn-action (action (assoc action-args :state (:state nav)))
+                               i id body)
+              nav)))
         (assoc initial-nav :current current :pos 0)
         (a/tap mult (a/chan)))
        (a/put! in [:hop id]))
@@ -248,19 +286,15 @@
         options
         (map (fn [option]
                {:custom-nav-action :pick-option
-                :state-id state-id :option option
-                :state-update-fn (:update settings)
                 :action action :args {:pick option
                                       :pick-i (index-of options option)
+                                      :state-id state-id
                                       :options options}}))
         (interleave options)
         (#(concat % (:more settings)))))))
 
 (defmethod custom-nav-action :pick-option
-  [{:keys [state-id state-update-fn option action :as args]}
-   parse-fn-action nav channels]
-  (a/put! (:in channels) [:state state-id option])
-  (->> (update-in (:state nav) [state-id]
-                  (or state-update-fn (constantly option)))
-       (assoc args :state)
-       action parse-fn-action))
+  [{:keys [args action]} {:keys [selected channels]}]
+  (doto (:in channels)
+    (a/put! [:state (:state-id args) (:pick args)])
+    (a/put! [:custom-nav-action-with-state action selected args])))
