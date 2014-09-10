@@ -126,8 +126,9 @@
   [nav args refresh persist?]
   (let [current-id (-> nav :current first)
         new-nav (reduce
-                 (fn [n [id place & fix]]
-                   (let [apply-fix (nav-entry/create-fix place fix)
+                 (fn [n [target place & fix]]
+                   (let [id (or target current-id)
+                         apply-fix (nav-entry/create-fix place fix)
                          n' (if persist?
                               (apply-fix n [:hierarchy id :data 0]
                                          [:hierarchy id :data 1])
