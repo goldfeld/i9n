@@ -285,11 +285,15 @@
        (->>
         options
         (map (fn [option]
-               {:custom-nav-action :pick-option
-                :action action :args {:pick option
-                                      :pick-i (index-of options option)
-                                      :state-id state-id
-                                      :options options}}))
+               (let [i (index-of options option)]
+                 {:custom-nav-action :pick-option
+                  :action action
+                  :args {:pick (if-let [handles (:handles settings)]
+                                 (nth handles i)
+                                 option)
+                         :pick-i i
+                         :state-id state-id
+                         :options options}})))
         (interleave options)
         (#(concat % (:more settings)))))))
 
