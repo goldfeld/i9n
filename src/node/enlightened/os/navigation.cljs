@@ -226,10 +226,9 @@
                   dest (get-in nav [:hierarchy id :data])]
               (if (and dest (not= id (first current)))
                 (hop (into [id] dest) (or go-to 0)
-                     (-> (assoc nav :pos current-pos)
-                         (assoc-in [:hierarchy id :link]
-                                   {:nav-entry current
-                                    :pos current-pos}))
+                     (assoc-in nav [:hierarchy id :link]
+                               {:nav-entry current
+                                :pos current-pos})
                      channels refresh)
                 nav))
             :hop
