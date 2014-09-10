@@ -96,7 +96,8 @@
       :append (fn [nav _ bpath]
                 (update-in nav bpath #(into (or (and (vector? %) %) []) fix)))
       :prepend (fn [nav _ bpath]
-                 (update-in nav bpath #(into fix (or (and (vector? %) %) []))))
+                 (update-in nav bpath #(into (vec fix)
+                                             (or (and (vector? %) %) []))))
       :last (fn [nav _ bpath]
               (update-in nav bpath
                          #(fix-at (-> % count dec dec) fix true nav _ bpath)))
