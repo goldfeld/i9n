@@ -188,23 +188,23 @@
               :right ["l" "right"]}})
 
 (defn update-state [nav state-id state-val]
-  (if-let [{:keys [set deps]} (get-in nav [:hierarchy :state state-id])]
-    (update-in nav [:hierarchy :state state-id :val]
+  (if-let [{:keys [set deps]} (get-in nav [:state state-id])]
+    (update-in nav [:state state-id :val]
                (fn [old-val]
                  (set state-val old-val 
-                      (select-keys (get-in nav [:hierarchy :state]) deps))))
-    (assoc-in nav [:hierarchy :state state-id]
+                      (select-keys (:state nav) deps))))
+    (assoc-in nav [:state state-id]
               {:val state-val
                :get (fn [val] val)
                :set (fn [val _ _] val)})))
 
 (defn update-states [nav & id-state-pairs]
   (reduce (fn [n [state-id state-val]]
-            (if-let [dpdnts (get-in n [:hierarchy :state state-id :dependants])]
+            (if-let [dpdnts (get-in n [:state state-id :dependants])]
               (reduce (fn [n' dpdt]
                         (condp apply [dpdt]
                           fn? (do (dpdt) n')
-                          keyword? (let [d (get-in n' [:hierarchy :state dpdt])]
+                          keyword? (let [d (get-in n' [:state dpdt])]
                                      (or (and (map? d) (= :eager (:computed d))
                                               (update-state n' dpdt (:val d)))
                                          n'))))
