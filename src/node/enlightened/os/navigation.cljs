@@ -25,19 +25,19 @@
        (.focus viewer)
        viewer)))
 
-(defn go-to-book-part [i chan book km key-binds titles parts]
+(defn go-to-book-part [i chan book km keybinds titles parts]
   (apply term/unset-keys book @km)
   (.setContent book (nth parts i))
   (term/render)
   (let [quit (fn [] (a/put! chan [:pos i]) (a/close! chan))
-        kmaps [(:quit key-binds) quit
-               (:left key-binds)
+        kmaps [(:quit keybinds) quit
+               (:left keybinds)
                (if (> i 0)
-                 #(go-to-book-part (dec i) chan book km key-binds titles parts)
+                 #(go-to-book-part (dec i) chan book km keybinds titles parts)
                  quit)
-               (:right key-binds)
+               (:right keybinds)
                (if (< i (dec (count parts)))
-                 #(go-to-book-part (inc i) chan book km key-binds titles parts)
+                 #(go-to-book-part (inc i) chan book km keybinds titles parts)
                  (constantly nil))]]
     (reset! km kmaps)
     (apply term/set-keys book kmaps)
@@ -69,7 +69,7 @@
    handle-returned-action {in :in :as channels} cfg]
   (fn [_ i]
     (let [action (create-action! body i #(a/put! in [:hop id %])
-                                 widget (:key-binds cfg))]
+                                 widget (:keybinds cfg))]
       (condp apply [action]
         keyword? (a/put! in [:next action i])
         string? (let [text (create-text-viewer! widget action)]
@@ -88,7 +88,7 @@
 (defn create-refresh-fn
   [widget title-widget handle-returned-action channels cfg]
   (fn [{back :back rm-back :rm-back [id title bd] :current :as nav}]
-    (let [l-binds (-> cfg :key-binds :left)
+    (let [l-binds (-> cfg :keybinds :left)
           parse-body
           (fn [body]
             (condp apply [body]
@@ -177,9 +177,9 @@
 
 (def config-default
   {:dispatch identity
-   :key-binds {:quit ["q" "escape"]
-               :left ["h" "left"]
-               :right ["l" "right"]}})
+   :keybinds {:quit ["q" "escape"]
+              :left ["h" "left"]
+              :right ["l" "right"]}})
 
 (defn update-state [nav state-id state-val]
   (if-let [{:keys [set deps]} (get-in nav [:hierarchy :state state-id])]
