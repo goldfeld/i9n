@@ -1,6 +1,7 @@
 (ns enlightened.os.navigation
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :as a]
+            [enlightened.ext :as ext]
             [enlightened.nav-entry :as nav-entry]
             [enlightened.more :refer [channel? index-of]]
             [enlightened.os.term :as term :refer [widget?]]
@@ -8,8 +9,6 @@
 
 (defmulti custom-nav-action (fn [action-map more] (:nav-action action-map)))
 (defmethod custom-nav-action :default [action-map more] nil)
-
-(def nav-action? (every-pred map? #(contains? % :nav-action)))
 
 (declare create-pane)
 
@@ -42,6 +41,16 @@
     (reset! km kmaps)
     (apply term/set-keys book kmaps)
     chan))
+
+(defn handle-map-action
+  [action i nav handle-returned-action channels widget cfg]
+  (condp #(contains? %2 %1) action
+    :nav-action
+    (custom-nav-action
+     action {:selected i :nav nav :channels channels
+             :handle-returned-action
+             #(handle-returned-action % i handle-returned-action nav)})
+    :i9n (ext/i9n action widget nav cfg)))
 
 (defn create-action! [body selection restore-state pane binds]
   (let [actions (take-nth 2 (rest body))]
@@ -77,11 +86,8 @@
                   [nil text {:remove-text #(do (.detach text) :do-once)}])
 
         channel? (a/pipe action in false)
-        nav-action?
-        (custom-nav-action
-         action {:selected i :nav nav :channels channels
-                 :handle-returned-action
-                 #(handle-returned-action % i handle-returned-action nav)})
+        map? (handle-map-action action i nav handle-returned-action
+                                channels widget cfg)
         fn? (handle-returned-action (action) i handle-returned-action nav)
         ((:dispatch cfg) action)))))
 
@@ -99,6 +105,8 @@
                         (term/set-key-once t l-binds #(do (.detach t) (b)))
                         nil)
               channel? (do (a/pipe body (:in channels) false) nil)
+              map? (handle-map-action body i nav handle-returned-action
+                                      channels widget cfg)
               fn? (recur (body))
               nil))
           options (parse-body bd)]
@@ -115,7 +123,7 @@
       (term/render))
     (dissoc nav :rm-back)))
 
-(defn create-handle-returned-action [{in :in :as channels} widget]
+(defn create-handle-returned-action [{in :in :as channels} widget cfg]
   (fn [action i self {[id title body] :current :as nav}]
     (condp apply [action]
       keyword? (a/put! in [:next action i])
@@ -126,9 +134,7 @@
                             [id item (str (get body item) ": " action)]
                             [id (inc item) (constantly nil)]]))
       channel? (a/pipe action in false)
-      nav-action?
-      (custom-nav-action action {:selected i :nav nav :channels channels
-                                 :handle-returned-action #(self % i self nav)})
+      map? (handle-map-action body i nav self channels widget cfg)
       nil? nil
       widget? (do (.detach widget) action))))
 
@@ -215,8 +221,8 @@
            mult (or (:mult cfg) (a/mult in))
            channels (assoc (:watches cfg) :in in :mult mult)
            title-widget (term/create-text {:left 2 :content title})
-           handle-returned-action (create-handle-returned-action channels
-                                                                 widget)
+           handle-returned-action (create-handle-returned-action
+                                   channels widget cfg)
            refresh (create-refresh-fn widget title-widget
                                       handle-returned-action channels cfg)]
        (.prepend widget title-widget)
