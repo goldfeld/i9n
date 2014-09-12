@@ -7,7 +7,7 @@
         :url "https://github.com/longstorm/enlightened.git"}
   :aliases {"cleantest" ["do" "clean," "cljsbuild" "once," "test,"]
             "autotest" ["do" "clean," "cljsbuild" "auto" "test"]}
-  :source-paths ["src"]
+  :source-paths ["src/lib" "src/node" "src/plugins"]
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/clojurescript "0.0-2202"]
                  [org.clojure/core.async "0.1.256.0-1bf8cf-alpha"]
