@@ -43,14 +43,11 @@
     chan))
 
 (defn handle-map-action
-  [action i nav handle-returned-action channels widget cfg]
+  [action i {in :in}]
   (condp #(contains? %2 %1) action
-    :nav-action
-    (custom-nav-action
-     action {:selected i :nav nav :channels channels
-             :handle-returned-action
-             #(handle-returned-action % i handle-returned-action nav)})
-    :i9n (ext/i9n action widget nav cfg)))
+    :nav-action (a/put! in [:nav-action action i])
+    :i9n (a/put! in [:i9n action]) 
+    nil))
 
 (defn create-action! [body selection restore-state pane binds]
   (let [actions (take-nth 2 (rest body))]
@@ -86,8 +83,7 @@
                   [nil text {:remove-text #(do (.detach text) :do-once)}])
 
         channel? (a/pipe action in false)
-        map? (handle-map-action action i nav handle-returned-action
-                                channels widget cfg)
+        map? (handle-map-action action i channels)
         fn? (handle-returned-action (action) i handle-returned-action nav)
         ((:dispatch cfg) action)))))
 
@@ -105,8 +101,7 @@
                         (term/set-key-once t l-binds #(do (.detach t) (b)))
                         nil)
               channel? (do (a/pipe body (:in channels) false) nil)
-              map? (handle-map-action body i nav handle-returned-action
-                                      channels widget cfg)
+              map? (handle-map-action body nil channels)
               fn? (recur (body))
               nil))
           options (parse-body bd)]
@@ -134,7 +129,7 @@
                             [id item (str (get body item) ": " action)]
                             [id (inc item) (constantly nil)]]))
       channel? (a/pipe action in false)
-      map? (handle-map-action body i nav self channels widget cfg)
+      map? (handle-map-action action i channels)
       nil? nil
       widget? (do (.detach widget) action))))
 
@@ -263,8 +258,18 @@
                              (assoc-in nav [:hierarchy id :dirty] true))
                            nav args)
             :state (apply update-states nav args)
-            :nav-action-with-state
-            (let [[action i action-args] args]
+            :i9n (do (ext/custom-i9n (first args) {:parent widget :nav nav
+                                                   :cfg cfg})
+                     nav)
+            :nav-action
+            (let [[action-map i] args
+                  hndl #(handle-returned-action % i handle-returned-action nav)]
+              (custom-nav-action action-map
+                                 {:selected i :nav nav :channels channels
+                                  :handle-returned-action hndl})
+              nav)
+            :handle-returned-action
+            (let [[action action-args i] args]
               (handle-returned-action
                (action (assoc action-args :state (:state nav)))
                i handle-returned-action nav)
@@ -315,7 +320,7 @@
   [{:keys [action args]} {:keys [selected channels]}]
   (doto (:in channels)
     (a/put! [:state (:state-id args) (:pick args)])
-    (a/put! [:nav-action-with-state action selected args])))
+    (a/put! [:handle-returned-action action args selected])))
 
 (defmethod custom-nav-action :hop
   [{:keys [action args]} {:keys [channels]}]
