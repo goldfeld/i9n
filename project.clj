@@ -14,7 +14,7 @@
                  [longstorm/claude "0.1.4"]]
   :cljsbuild
   {:builds [{:id "demo"
-             :source-paths ["src/lib" "src/node" "demo"]
+             :source-paths ["src/lib" "src/node" "src/plugins" "demo"]
              :compiler {:target :nodejs
                         :output-to "resources/public/demo.js"
                         :optimizations :simple}}
