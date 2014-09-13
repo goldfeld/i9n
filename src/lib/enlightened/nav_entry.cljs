@@ -93,6 +93,7 @@
     keyword?
     (case place
       :title (fn [nav tpath _] (assoc-in nav tpath (first fix)))
+      :body (fn [nav _ bpath] (assoc-in nav bpath (first fix)))
       :append (fn [nav _ bpath]
                 (update-in nav bpath #(into (or (and (vector? %) %) []) fix)))
       :prepend (fn [nav _ bpath]
