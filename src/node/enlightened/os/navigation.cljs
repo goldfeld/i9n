@@ -219,32 +219,34 @@
            handle-returned-action (create-handle-returned-action
                                    channels widget cfg)
            refresh (create-refresh-fn widget title-widget
-                                      handle-returned-action channels cfg)]
+                                      handle-returned-action channels cfg)
+           hop #(hop %1 %2 %3 channels refresh)]
        (.prepend widget title-widget)
        (a/reduce
         (fn [nav [cmd & args]]
           (case cmd
             :next
-            (let [[id pos go-to] args
-                  current (:current nav)
-                  current-pos (or pos 0)
-                  dest (get-in nav [:hierarchy id :data])]
-              (if (and dest (not= id (first current)))
-                (hop (into [id] dest) (or go-to 0)
-                     (assoc-in nav [:hierarchy id :link]
-                               {:nav-entry current
-                                :pos current-pos})
-                     channels refresh)
-                nav))
+            (let [id (first args)
+                  go-to (nth args 2 0)]
+              (if (vector? id)
+                (hop id go-to (nav-entry/add-to-hierarchy nav [id]))
+                (let [current (:current nav)
+                      pos (nth args 1 0)
+                      dest (get-in nav [:hierarchy id :data])]
+                  (if (and dest (not= id (first current)))
+                    (hop (into [id] dest) go-to
+                         (assoc-in nav [:hierarchy id :link] {:nav-entry current
+                                                              :pos pos}))
+                    nav))))
             :hop
-            (let [[id go-to] args
-                  dest (get-in nav [:hierarchy id :data])]
-              (if-not dest
-                nav
-                (hop (into [id] dest) (or go-to 0) nav channels refresh)))
-            :set
-            (let [[nav-entry go-to] args]
-              (hop nav-entry (or go-to 0) nav channels refresh))
+            (let [id (first args)
+                  go-to (nth args 1 0)]
+              (if (vector? id)
+                (hop id go-to (nav-entry/add-to-hierarchy nav [id]))
+                (if-let [dest (get-in nav [:hierarchy id :data])]
+                  (hop (into [id] dest) go-to nav)
+                  nav)))
+            :set (let [[nav-entry go-to] args] (hop nav-entry (or go-to 0) nav))
             :fix (change nav args refresh :persist)
             :put (change nav args refresh false)
             :add (nav-entry/add-to-hierarchy nav args)

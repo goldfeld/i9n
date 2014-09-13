@@ -30,7 +30,10 @@ even as they're accepted asynchronously.
 
 ***** :next
 
-Takes the id of the screen to go next as first argument.
+Takes as first argument either the id of the screen to go next, or the
+full nav-entry--that is, a vector with three elements: the id, the
+title and a body. In this latter case, the nav-entry is added to the
+hierarchy (or updated, if the id already exists.)
 
 =:next= messages are the standard way to navigate the interface,
 because it saves a link so you can go back to the previous screen. It
@@ -62,17 +65,16 @@ able to go all the way back.
 
 ***** :set
 
-Like =:hop=, except that instead of taking a screen id as first
-argument, it takes a full nav-entry--that is, a vector with three
-elements: the id, the title and a body. This can be useful for setting
-the interface to a temporary screen with a dummy id that won't go into
-the hierarchy.
+Like =:hop=, except that it must always take a full nav-entry as first
+argument, never a screen id. A =:set= can be useful for setting the
+interface to a temporary screen with a dummy id (say, =:temp= or
+really anything, though not =nil=) that won't go into the hierarchy.
 
 In reality I was lying and =:hop= is not used internally to implement
 the action of going back screens. It's =:set= that's used, because
 when a link is saved, the whole nav-entry is copied there, which
 allows local, temporary state to be preserved for when you go back.
-The =:set= command can be used for similar effect.
+So this operation can be used for similar effect.
 
 ***** :fix
 
