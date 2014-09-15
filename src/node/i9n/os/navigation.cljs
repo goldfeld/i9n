@@ -1,11 +1,11 @@
-(ns enlightened.os.navigation
+(ns i9n.os.navigation
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :as a]
-            [enlightened.ext :as ext]
-            [enlightened.nav-entry :as nav-entry]
-            [enlightened.more :refer [channel? index-of]]
-            [enlightened.os.term :as term :refer [widget?]]
-            [enlightened.os.widgets :as widgets]))
+            [i9n.ext :as ext]
+            [i9n.nav-entry :as nav-entry]
+            [i9n.more :refer [channel? index-of]]
+            [i9n.os.term :as term :refer [widget?]]
+            [i9n.os.widgets :as widgets]))
 
 (defmulti custom-nav-action (fn [action-map more] (:nav-action action-map)))
 (defmethod custom-nav-action :default [action-map more] nil)

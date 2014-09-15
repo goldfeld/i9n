@@ -1,7 +1,7 @@
-(ns enlightened.ext.text
-  (:require [enlightened.ext :refer [custom-i9n]]
-            [enlightened.os.term :as term]
-            [enlightened.os.widgets :as widgets]))
+(ns i9n.ext.text
+  (:require [i9n.ext :refer [custom-i9n]]
+            [i9n.os.term :as term]
+            [i9n.os.widgets :as widgets]))
 
 (defn create-text-viewer!
   ([pane text]

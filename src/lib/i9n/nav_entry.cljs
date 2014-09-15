@@ -1,6 +1,6 @@
-(ns enlightened.nav-entry
+(ns i9n.nav-entry
   "Pure, testable helpers for enlightnened.navigation"
-  (:require [enlightened.more :refer [index-of splice replace-at-indexes]]))
+  (:require [i9n.more :refer [index-of splice replace-at-indexes]]))
 
 (defn add-to-hierarchy
   ([nav nav-entries] (add-to-hierarchy nav nav-entries nil))

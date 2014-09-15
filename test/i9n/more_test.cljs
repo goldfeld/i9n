@@ -1,5 +1,5 @@
-(ns enlightened.more-test
-  (:require [enlightened.more :as more]
+(ns i9n.more-test
+  (:require [i9n.more :as more]
             [cemerick.cljs.test
              :include-macros true :refer [deftest is testing]]
             [cemerick.double-check.clojure-test :as tc

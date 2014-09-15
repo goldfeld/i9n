@@ -1,4 +1,4 @@
-(ns enlightened.more)
+(ns i9n.more)
 
 (defn index-of
   ([coll item] (.indexOf (clj->js coll) (clj->js item)))

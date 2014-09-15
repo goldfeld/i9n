@@ -1,10 +1,10 @@
-(ns enlightened-demo.main
+(ns i9n-demo.main
   (:require [cljs.nodejs :as node]
             [cljs.core.async :as a]
             [clojure.string :as strng]
             [claude.process :as proc]
-            [enlightened.os.term :as term]
-            [enlightened.os.navigation :refer [navigation-view]]))
+            [i9n.os.term :as term]
+            [i9n.os.navigation :refer [navigation-view]]))
 
 (defn sad-async []
   (let [chan (a/chan)]

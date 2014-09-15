@@ -1,5 +1,5 @@
-(ns enlightened.nav-entry-test
-  (:require [enlightened.nav-entry :as n]
+(ns i9n.nav-entry-test
+  (:require [i9n.nav-entry :as n]
             [cemerick.cljs.test
              :include-macros true :refer [deftest is testing]]
             [cemerick.double-check.clojure-test :as tc

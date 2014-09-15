@@ -1,4 +1,4 @@
-(ns enlightened.os.term
+(ns i9n.os.term
   (:require [cljs.nodejs :as node]))
 
 (def get-blessed (memoize #(node/require "blessed")))

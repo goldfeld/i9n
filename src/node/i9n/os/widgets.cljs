@@ -1,7 +1,7 @@
-(ns enlightened.os.widgets
+(ns i9n.os.widgets
   (:refer-clojure :exclude [list])
-  (:require [enlightened.properties :as p]
-            [enlightened.os.term :as term]))
+  (:require [i9n.properties :as p]
+            [i9n.os.term :as term]))
 
 (declare create-args set-args)
 
@@ -11,7 +11,7 @@
 (defn create
   "Creates a widget. The overrides parameters are key-value pairs of a
   property and the desired override value.
-  (See enlightened.widgets/types for valid type values.)"
+  (See i9n.widgets/types for valid type values.)"
   [type & overrides]
   (let [[create-fn mods props] (create-args type)]
     (create-fn overrides mods props)))
@@ -20,7 +20,7 @@
   "Sets the content of a widget. Any content parameters will be
   concat'ed together to make up a list of the lines of the widget's
   body content.
-  (See enlightened.widgets/types for valid type values.)"
+  (See i9n.widgets/types for valid type values.)"
   ([widget type title content1 content2 & contents]
      (set-content widget type title (apply concat content1 content2 contents)))
   ([widget type title content]
