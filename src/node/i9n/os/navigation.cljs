@@ -159,21 +159,28 @@
         n (dissoc new-nav :current-is-dirty)]
     (if (:current-is-dirty new-nav) (refresh n) n)))
 
-(defn hop [nav-entry pos nav {:keys [in flush]} refresh]
-  (let [id (first nav-entry)
-        n (if (and flush (get-in nav [:hierarchy id :dirty]))
-            (do (a/put! flush id) (assoc-in nav [:hierarchy id :dirty] false))
-            nav)
-        n' (if-let [trigger (get-in n [:hierarchy id :trigger])]
-             (do (trigger id in)
-                 (update-in n [:hierarchy id] dissoc :trigger))
-             n)]
-    (-> (assoc n'
-          :pos pos
-          :current nav-entry
-          :rm-back (:back n')
-          :back (when-let [parent (get-in n' [:hierarchy id :link])]
-                  #(a/put! in [:set (:nav-entry parent) (:pos parent)])))
+(defn may-flush [nav id chan]
+  (if (and chan (get-in nav [:hierarchy id :dirty]))
+    (do (a/put! chan id)
+        (assoc-in nav [:hierarchy id :dirty] false))
+    nav))
+
+(defn may-trigger [nav id in]
+  (if-let [t (get-in nav [:hierarchy id :trigger])]
+    (do (t id in)
+        (update-in nav [:hierarchy id] dissoc :trigger))
+    nav))
+
+(defn hop [nav-entry pos nav {in :in :as channels} refresh]
+  (let [id (first nav-entry)]
+    (-> nav
+        (may-flush id (:flush channels))
+        (may-trigger id in)
+        (assoc :pos pos
+               :current nav-entry
+               :rm-back (:back nav)
+               :back (when-let [parent (get-in nav [:hierarchy id :link])]
+                       #(a/put! in [:set (:nav-entry parent) (:pos parent)])))
         refresh)))
 
 (def config-default
