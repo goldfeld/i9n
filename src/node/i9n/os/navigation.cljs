@@ -1,9 +1,10 @@
 (ns i9n.os.navigation
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :as a]
+            [secretary.core :as secretary]
             [i9n.ext :as ext]
             [i9n.nav-entry :as nav-entry]
-            [i9n.more :refer [channel? index-of]]
+            [i9n.more :as more :refer [channel? index-of]]
             [i9n.os.term :as term :refer [widget?]]
             [i9n.os.widgets :as widgets]))
 
@@ -183,6 +184,22 @@
                        #(a/put! in [:set (:nav-entry parent) (:pos parent)])))
         refresh)))
 
+(defn may-hop [target go-to nav may-create-link may-abort channels refresh]
+  (let [h #(hop %1 go-to %2 channels refresh)]
+    (condp apply [target]
+      vector? (h target (-> (may-create-link nav (first target))
+                            (nav-entry/add-to-hierarchy [target])))
+      keyword?
+      (if-let [dest (get-in nav [:hierarchy target :data])]
+        (may-abort target #(h (into [target] dest)
+                              (may-create-link nav target)))
+        (if-let [routed (secretary/dispatch!
+                         (str "/" (more/decode-keyword target)))]
+          (may-abort (first routed)
+                     #(h routed (-> (may-create-link nav (first routed))
+                                    (nav-entry/add-to-hierarchy [routed]))))
+          nav)))))
+
 (def config-default
   {:dispatch identity
    :keybinds {:quit ["q" "escape"]
@@ -226,34 +243,28 @@
            handle-returned-action (create-handle-returned-action
                                    channels widget cfg)
            refresh (create-refresh-fn widget title-widget
-                                      handle-returned-action channels cfg)
-           hop #(hop %1 %2 %3 channels refresh)]
+                                      handle-returned-action channels cfg)]
        (.prepend widget title-widget)
        (a/reduce
         (fn [nav [cmd & args]]
           (case cmd
             :next
-            (let [id (first args)
-                  go-to (nth args 2 0)]
-              (if (vector? id)
-                (hop id go-to (nav-entry/add-to-hierarchy nav [id]))
-                (let [current (:current nav)
-                      pos (nth args 1 0)
-                      dest (get-in nav [:hierarchy id :data])]
-                  (if (and dest (not= id (first current)))
-                    (hop (into [id] dest) go-to
-                         (assoc-in nav [:hierarchy id :link] {:nav-entry current
-                                                              :pos pos}))
-                    nav))))
+            (let [may-abort-hop (fn [id do-hop]
+                                  (if (not= id (first (:current nav)))
+                                    (do-hop)
+                                    nav))
+                  create-link (fn [n id] (assoc-in n [:hierarchy id :link]
+                                                   {:nav-entry (:current nav)
+                                                    :pos (nth args 1 0)}))]
+              (may-hop (first args) (nth args 2 0) nav
+                       create-link may-abort-hop channels refresh))
             :hop
-            (let [id (first args)
-                  go-to (nth args 1 0)]
-              (if (vector? id)
-                (hop id go-to (nav-entry/add-to-hierarchy nav [id]))
-                (if-let [dest (get-in nav [:hierarchy id :data])]
-                  (hop (into [id] dest) go-to nav)
-                  nav)))
-            :set (let [[nav-entry go-to] args] (hop nav-entry (or go-to 0) nav))
+            (may-hop (first args) (nth args 1 0) nav
+                     (fn [n id] n)
+                     (fn [id do-hop] (do-hop))
+                     channels refresh)
+            :set (let [[nav-entry go-to] args]
+                   (hop nav-entry (or go-to 0) nav channels refresh))
             :fix (change nav args refresh :persist)
             :put (change nav args refresh false)
             :add (nav-entry/add-to-hierarchy nav args)

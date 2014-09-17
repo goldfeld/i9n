@@ -1,20 +1,26 @@
 (ns i9n.nav-entry
-  "Pure, testable helpers for enlightnened.navigation"
-  (:require [i9n.more :refer [index-of splice replace-at-indexes]]))
+  "Pure, testable helpers for i9n.navigation"
+  (:require [i9n.more :refer [index-of splice replace-at-indexes]]
+            [i9n.step :refer [i9n-step]]))
 
 (defn add-to-hierarchy
   ([nav nav-entries] (add-to-hierarchy nav nav-entries nil))
   ([nav nav-entries update-in-entry]
-     (reduce (fn [n [raw-id title & args]]
-               (let [id (keyword raw-id)
-                     has-trigger (= 2 (count args))
-                     n' (if has-trigger
-                          (assoc-in n [:hierarchy id :trigger] (first args))
-                          n)]
-                 (-> (if update-in-entry (update-in-entry n' id) n')
-                     (assoc-in [:hierarchy id :data]
-                               (conj [title] ((if has-trigger second first)
-                                              args))))))
+     (reduce (fn [n entry]
+               (condp apply [entry]
+                 vector?
+                 (let [[id title & args] entry
+                       has-trigger (= 2 (count args))
+                       n' (if has-trigger
+                            (assoc-in n [:hierarchy id :trigger] (first args))
+                            n)]
+                   (-> (if update-in-entry (update-in-entry n' id) n')
+                       (assoc-in [:hierarchy id :data]
+                                 (conj [title] ((if has-trigger second first)
+                                                args)))))
+                 map? (if (contains? entry :i9n-step)
+                        (i9n-step entry n {}))
+                 n))
              nav nav-entries)))
 
 (defn create-nav [root-item nav-entries]

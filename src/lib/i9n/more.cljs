@@ -24,3 +24,26 @@
 
 (defn channel? [x]
   (satisfies? cljs.core.async.impl.protocols/Channel x))
+
+(defn route->keyword [s]
+  (->> (clojure.string/split s #"[\\/]" 2)
+       (map #(clojure.string/replace % "%20" "_+_"))
+       (apply keyword)))
+
+(defn encode-query-params [params]
+  (if (seq params)
+    (-> (reduce-kv (fn [s k v] (str s "&" (name k) "=" v)) (str) params)
+        (subs 1)
+        (#(str "?" %)))
+    (str)))
+
+(defn encode-keyword
+  ([s] (encode-keyword s {}))
+  ([s query-params]
+     (->> (clojure.string/split (str s (encode-query-params query-params))
+                                #"[\\/]" 2)
+          (map #(clojure.string/replace % #" " "_+_"))
+          (apply keyword))))
+
+(defn decode-keyword [k]
+  (clojure.string/replace (subs (str k) 1) "_+_" " "))
