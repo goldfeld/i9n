@@ -184,21 +184,20 @@
                        #(a/put! in [:set (:nav-entry parent) (:pos parent)])))
         refresh)))
 
-(defn may-hop [target go-to nav may-create-link may-abort channels refresh]
-  (let [h #(hop %1 go-to %2 channels refresh)]
-    (condp apply [target]
-      vector? (h target (-> (may-create-link nav (first target))
-                            (nav-entry/add-to-hierarchy [target])))
-      keyword?
-      (if-let [dest (get-in nav [:hierarchy target :data])]
-        (may-abort target #(h (into [target] dest)
-                              (may-create-link nav target)))
-        (if-let [routed (secretary/dispatch!
-                         (str "/" (more/decode-keyword target)))]
-          (may-abort (first routed)
-                     #(h routed (-> (may-create-link nav (first routed))
-                                    (nav-entry/add-to-hierarchy [routed]))))
-          nav)))))
+(defn may-hop [target nav may-create-link may-abort do-hop]
+  (condp apply [target]
+    vector? (do-hop target (-> (may-create-link nav (first target))
+                               (nav-entry/add-to-hierarchy [target])))
+    keyword?
+    (if-let [dest (get-in nav [:hierarchy target :data])]
+      (may-abort target #(do-hop (into [target] dest)
+                                 (may-create-link nav target)))
+      (if-let [routed (secretary/dispatch!
+                       (str "/" (more/decode-keyword target)))]
+        (may-abort (first routed)
+                   #(do-hop routed (-> (may-create-link nav (first routed))
+                                       (nav-entry/add-to-hierarchy [routed]))))
+        nav))))
 
 (def config-default
   {:dispatch identity
@@ -249,20 +248,16 @@
         (fn [nav [cmd & args]]
           (case cmd
             :next
-            (let [may-abort-hop (fn [id do-hop]
-                                  (if (not= id (first (:current nav)))
-                                    (do-hop)
-                                    nav))
-                  create-link (fn [n id] (assoc-in n [:hierarchy id :link]
+            (let [create-link (fn [n id] (assoc-in n [:hierarchy id :link]
                                                    {:nav-entry (:current nav)
                                                     :pos (nth args 1 0)}))]
-              (may-hop (first args) (nth args 2 0) nav
-                       create-link may-abort-hop channels refresh))
-            :hop
-            (may-hop (first args) (nth args 1 0) nav
-                     (fn [n id] n)
-                     (fn [id do-hop] (do-hop))
-                     channels refresh)
+              (may-hop (first args) nav create-link
+                       (fn [id do-hop]
+                         (if (not= id (first (:current nav))) (do-hop) nav))
+                       #(hop %1 (nth args 2 0) %2 channels refresh)))
+            :hop (may-hop (first args) nav (fn [n id] n)
+                          (fn [id do-hop] (do-hop))
+                          #(hop %1 (nth args 1 0) %2 channels refresh))
             :set (let [[nav-entry go-to] args]
                    (hop nav-entry (or go-to 0) nav channels refresh))
             :fix (change nav args refresh :persist)
