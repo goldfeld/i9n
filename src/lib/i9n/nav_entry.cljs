@@ -9,17 +9,18 @@
      (reduce (fn [n entry]
                (condp apply [entry]
                  vector?
-                 (let [[id title & args] entry
-                       has-trigger (= 2 (count args))
+                 (let [[id title body] entry
+                       has-trigger (and (vector? body) (odd? (count body)))
                        n' (if has-trigger
-                            (assoc-in n [:hierarchy id :trigger] (first args))
+                            (assoc-in n [:hierarchy id :trigger] (last body))
                             n)]
                    (-> (if update-in-entry (update-in-entry n' id) n')
-                       (assoc-in [:hierarchy id :data]
-                                 (conj [title] ((if has-trigger second first)
-                                                args)))))
+                       (assoc-in
+                        [:hierarchy id :data]
+                        [title (if has-trigger (vec (butlast body)) body)])))
                  map? (if (contains? entry :i9n-step)
-                        (i9n-step entry n {}))
+                        (i9n-step entry n {})
+                        n)
                  n))
              nav nav-entries)))
 

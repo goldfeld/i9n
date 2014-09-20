@@ -72,8 +72,7 @@
 (defn create-selection-fn
   "Creates the pane/navigation selection fn to be passed to blessed's
   list internals. Here is all the logic dependant on what type of se"
-  [widget {[id title body] :current :as nav}
-   handle-returned-action {in :in :as channels} cfg]
+  [widget {[id title body] :current :as nav} hra {in :in :as channels} cfg]
   (fn [_ i]
     (let [action (create-action! body i #(a/put! in [:hop id %])
                                  widget (:keybinds cfg))]
@@ -85,11 +84,11 @@
 
         channel? (a/pipe action in false)
         map? (handle-map-action action i channels)
-        fn? (handle-returned-action (action) i handle-returned-action nav)
+        fn? (hra (action) i hra nav)
         ((:dispatch cfg) action)))))
 
 (defn create-refresh-fn
-  [widget title-widget handle-returned-action channels cfg]
+  [widget title-widget hra channels cfg]
   (fn [{back :back rm-back :rm-back [id title bd] :current :as nav}]
     (let [l-binds (-> cfg :keybinds :left)
           parse-body
@@ -114,8 +113,7 @@
         (doto widget
           (term/set-items (take-nth 2 options))
           (.select (:pos nav))
-          (.on "select" (create-selection-fn widget nav handle-returned-action
-                                             channels cfg))))
+          (.on "select" (create-selection-fn widget nav hra channels cfg))))
       (term/render))
     (dissoc nav :rm-back)))
 
@@ -166,22 +164,23 @@
         (assoc-in nav [:hierarchy id :dirty] false))
     nav))
 
-(defn may-trigger [nav id in]
-  (if-let [t (get-in nav [:hierarchy id :trigger])]
-    (do (t id in)
+(defn may-trigger [nav id in hra]
+  (if-let [trigger (get-in nav [:hierarchy id :trigger])]
+    (do (hra (trigger id in) nil hra nav)
         (update-in nav [:hierarchy id] dissoc :trigger))
     nav))
 
-(defn hop [nav-entry pos nav {in :in :as channels} refresh]
-  (let [id (first nav-entry)]
+(defn hop [[id _ body :as entry] pos nav {:keys [refresh channels] :as other}]
+  (let [id (first entry)]
     (-> nav
         (may-flush id (:flush channels))
-        (may-trigger id in)
+        (may-trigger id (:in channels) (:handle-returned-action other))
         (assoc :pos pos
-               :current nav-entry
+               :current entry
                :rm-back (:back nav)
                :back (when-let [parent (get-in nav [:hierarchy id :link])]
-                       #(a/put! in [:set (:nav-entry parent) (:pos parent)])))
+                       #(a/put! (:in channels)
+                                [:set (:nav-entry parent) (:pos parent)])))
         refresh)))
 
 (defn may-hop [target nav may-create-link may-abort do-hop]
@@ -190,13 +189,14 @@
                                (nav-entry/add-to-hierarchy [target])))
     keyword?
     (if-let [dest (get-in nav [:hierarchy target :data])]
-      (may-abort target #(do-hop (into [target] dest)
-                                 (may-create-link nav target)))
+      (may-abort target nav #(do-hop (into [target] dest)
+                                     (may-create-link nav target)))
       (if-let [routed (secretary/dispatch!
                        (str "/" (more/decode-keyword target)))]
-        (may-abort (first routed)
-                   #(do-hop routed (-> (may-create-link nav (first routed))
-                                       (nav-entry/add-to-hierarchy [routed]))))
+        (let [n (nav-entry/add-to-hierarchy nav [routed])
+              id (first routed)]
+          (may-abort id n #(do-hop (into [id] (get-in n [:hierarchy id :data]))
+                                   (may-create-link n id))))
         nav))))
 
 (def config-default
@@ -239,10 +239,10 @@
            mult (or (:mult cfg) (a/mult in))
            channels (assoc (:watches cfg) :in in :mult mult)
            title-widget (term/create-text {:left 2 :content title})
-           handle-returned-action (create-handle-returned-action
-                                   channels widget cfg)
-           refresh (create-refresh-fn widget title-widget
-                                      handle-returned-action channels cfg)]
+           hra (create-handle-returned-action channels widget cfg)
+           other {:channels channels :handle-returned-action hra
+                  :refresh (create-refresh-fn widget title-widget
+                                              hra channels cfg)}]
        (.prepend widget title-widget)
        (a/reduce
         (fn [nav [cmd & args]]
@@ -252,16 +252,16 @@
                                                    {:nav-entry (:current nav)
                                                     :pos (nth args 1 0)}))]
               (may-hop (first args) nav create-link
-                       (fn [id do-hop]
-                         (if (not= id (first (:current nav))) (do-hop) nav))
-                       #(hop %1 (nth args 2 0) %2 channels refresh)))
+                       (fn [id n do-hop]
+                         (if (not= id (first (:current n))) (do-hop) n))
+                       #(hop %1 (nth args 2 0) %2 other)))
             :hop (may-hop (first args) nav (fn [n id] n)
-                          (fn [id do-hop] (do-hop))
-                          #(hop %1 (nth args 1 0) %2 channels refresh))
+                          (fn [id _ do-hop] (do-hop))
+                          #(hop %1 (nth args 1 0) %2 other))
             :set (let [[nav-entry go-to] args]
-                   (hop nav-entry (or go-to 0) nav channels refresh))
-            :fix (change nav args refresh :persist)
-            :put (change nav args refresh false)
+                   (hop nav-entry (or go-to 0) nav other))
+            :fix (change nav args (:refresh other) :persist)
+            :put (change nav args (:refresh other) false)
             :add (nav-entry/add-to-hierarchy nav args)
             :stub (nav-entry/add-to-hierarchy
                    nav args #(assoc-in %1 [:hierarchy %2 :dirty] true))
@@ -277,17 +277,14 @@
                                                    :cfg cfg})
                      nav)
             :nav-action
-            (let [[action-map i] args
-                  hndl #(handle-returned-action % i handle-returned-action nav)]
-              (custom-nav-action action-map
-                                 {:selected i :nav nav :channels channels
-                                  :handle-returned-action hndl})
+            (let [[action-map i] args]
+              (custom-nav-action
+               action-map {:selected i :nav nav :channels channels
+                           :handle-returned-action #(hra % i hra nav)})
               nav)
             :handle-returned-action
             (let [[action action-args i] args]
-              (handle-returned-action
-               (action (assoc action-args :state (:state nav)))
-               i handle-returned-action nav)
+              (hra (action (assoc action-args :state (:state nav))) i hra nav)
               nav)))
         (assoc initial-nav :current current :pos 0)
         (a/tap mult (a/chan)))
