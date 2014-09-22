@@ -119,6 +119,12 @@
              (update-in nav bpath #(if (and (vector? %) (seq %))
                                      (pop (if (odd? (count %)) % (pop %)))
                                      [])))
+      :remove (fn [nav _ bpath]
+                (update-in bpath #(splice % (x2 (:pos nav)) 2)))
+      :insert (fn [nav _ bpath]
+                (fix-at (x2 (:pos nav)) fix false nav _ bpath))
+      :insert-after (fn [nav _ bpath]
+                      (fix-at (x2 (inc (:pos nav))) fix false nav _ bpath))
       noop-fix)
     vector?
     (let [[cmd & [arg & more :as args]] place]
@@ -137,7 +143,9 @@
                   (update-in nav bpath #(splice % (x2 (second args))
                                                 (x2 arg))))
         :remove (fn [nav _ bpath]
-                  (when-let [i (apply index-of (get-in nav bpath) more)]
+                  (when-let [i (if more
+                                 (apply index-of (get-in nav bpath) more)
+                                 (x2 (:pos nav)))]
                     (update-in nav bpath #(splice % (current-label i)
                                                   (x2 arg)))))
         noop-fix))
