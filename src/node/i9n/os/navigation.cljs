@@ -145,34 +145,6 @@
       nil? nil
       widget? (do (.detach widget) action))))
 
-(defn change
-  "Applies :fix or :put operations into a nav. The option between :fix
-  and :put is made by the persist? parameter, which means that a :fix
-  is persisted into the hierarchy, whereas a :put is not. Meanwhile,
-  operations targeting the current nav-entry will effect the
-  temporary-state nav-entry copy, regardless of the persist? param. As
-  such, each operation may in fact be applied to both hierarchy and
-  current entry, to one of the two, or to none at all."
-  [nav args refresh persist?]
-  (let [current-id (-> nav :current first)
-        new-nav (reduce
-                 (fn [n [target place & fix]]
-                   (let [id (or target current-id)
-                         apply-fix (nav-entry/create-fix place fix)
-                         n' (if persist?
-                              (apply-fix n [:hierarchy id :data 0]
-                                         [:hierarchy id :data 1])
-                              n)]
-                     (if (= id current-id)
-                       (-> (apply-fix n' [:current 1] [:current 2])
-                           (assoc :current-is-dirty true))
-                       n')))
-                 nav args)
-        n (dissoc new-nav :current-is-dirty)]
-    (if (:current-is-dirty new-nav)
-      (refresh (nav-entry/set-last n (-> n :current (nth 2) count)))
-      n)))
-
 (defn may-flush [nav id chan]
   (if (and chan (get-in nav [:hierarchy id :dirty]))
     (do (a/put! chan id)
@@ -263,7 +235,7 @@
           "j" #(a/put! in [:select + 1]))
          (.prepend title-widget))
        (a/reduce
-        (fn [nav [cmd & args]]
+        (fn [nav [cmd & args :as op]]
           (case cmd
             :next
             (let [create-link (fn [n id] (assoc-in n [:hierarchy id :link]
@@ -278,8 +250,6 @@
                           #(hop %1 (nth args 1 0) %2 other))
             :set (let [[nav-entry go-to] args]
                    (hop nav-entry (or go-to 0) nav other))
-            :fix (change nav args (:refresh other) :persist)
-            :put (change nav args (:refresh other) false)
             :add (nav-entry/add-to-hierarchy nav args)
             :stub (nav-entry/add-to-hierarchy
                    nav args #(assoc-in %1 [:hierarchy %2 :dirty] true))
@@ -301,7 +271,8 @@
             :handle-returned-action
             (let [[action action-args i] args]
               (hra (action (assoc action-args :state (:state nav))) i hra nav)
-              nav)))
+              nav)
+            (ext/i9n-op op nav other)))
         (assoc initial-nav :current current :pos 0)
         (a/tap mult (a/chan)))
        (a/put! in [:hop id]))
