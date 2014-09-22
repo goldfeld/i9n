@@ -117,6 +117,19 @@
       (term/render))
     (dissoc nav :rm-back)))
 
+(defn select-option
+  ([widget nav i relative-fn]
+     (select-option widget nav (relative-fn (:pos nav) i)))
+  ([widget {last :last :as nav} i]
+     (if-let [k (cond (= :last i) last
+                      (integer? i) (cond (> i last) last
+                                         (< i 0) 0
+                                         :else i))]
+       (do (.select widget k)
+           (term/render)
+           (assoc nav :pos k))
+       nav)))
+
 (defn create-handle-returned-action [{in :in :as channels} widget cfg]
   (fn [action i self {[id title body] :current :as nav}]
     (condp apply [action]
@@ -156,7 +169,9 @@
                        n')))
                  nav args)
         n (dissoc new-nav :current-is-dirty)]
-    (if (:current-is-dirty new-nav) (refresh n) n)))
+    (if (:current-is-dirty new-nav)
+      (refresh (nav-entry/set-last n (-> n :current (nth 2) count)))
+      n)))
 
 (defn may-flush [nav id chan]
   (if (and chan (get-in nav [:hierarchy id :dirty]))
@@ -171,17 +186,16 @@
     nav))
 
 (defn hop [[id _ body :as entry] pos nav {:keys [refresh channels] :as other}]
-  (let [id (first entry)]
-    (-> nav
-        (may-flush id (:flush channels))
-        (may-trigger id (:in channels) (:handle-returned-action other))
-        (assoc :pos pos
-               :current entry
-               :rm-back (:back nav)
-               :back (when-let [parent (get-in nav [:hierarchy id :link])]
-                       #(a/put! (:in channels)
-                                [:set (:nav-entry parent) (:pos parent)])))
-        refresh)))
+  (-> (if (vector? body) (nav-entry/set-last nav (count body)) nav)
+      (may-flush id (:flush channels))
+      (may-trigger id (:in channels) (:handle-returned-action other))
+      (assoc :pos pos
+             :current entry
+             :rm-back (:back nav)
+             :back (when-let [parent (get-in nav [:hierarchy id :link])]
+                     #(a/put! (:in channels)
+                              [:set (:nav-entry parent) (:pos parent)])))
+      refresh))
 
 (defn may-hop [target nav may-create-link may-abort do-hop]
   (condp apply [target]
@@ -243,7 +257,11 @@
            other {:channels channels :handle-returned-action hra
                   :refresh (create-refresh-fn widget title-widget
                                               hra channels cfg)}]
-       (.prepend widget title-widget)
+       (doto widget
+         (term/set-keys
+          "k" #(a/put! in [:select - 1])
+          "j" #(a/put! in [:select + 1]))
+         (.prepend title-widget))
        (a/reduce
         (fn [nav [cmd & args]]
           (case cmd
@@ -265,16 +283,14 @@
             :add (nav-entry/add-to-hierarchy nav args)
             :stub (nav-entry/add-to-hierarchy
                    nav args #(assoc-in %1 [:hierarchy %2 :dirty] true))
-            :select (let [i (first args)]
-                      (.select widget (if (= :last i)
-                                        (-> nav :current (nth 2) count)
-                                        i)))
+            :select (let [target (if (= 1 (count args)) args (reverse args))]
+                      (apply select-option widget nav target))
             :dirty (reduce (fn [n id]
                              (assoc-in nav [:hierarchy id :dirty] true))
                            nav args)
             :state (apply update-states nav args)
-            :i9n (do (ext/custom-i9n (first args) {:parent widget :nav nav
-                                                   :cfg cfg})
+            :i9n (do (ext/custom-i9n (first args)
+                                     {:parent widget :nav nav :cfg cfg})
                      nav)
             :nav-action
             (let [[action-map i] args]

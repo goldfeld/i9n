@@ -28,6 +28,9 @@
   (add-to-hierarchy {:hierarchy {:root {:data root-item}}}
                     nav-entries))
 
+(defn set-last [nav i]
+  (assoc nav :last (-> i (/ 2) int dec)))
+
 (defn fill-body
   "Prepares an entry's body for a fix by filling with nils as
   needed. If body is not a vector, return a vector full of nil
