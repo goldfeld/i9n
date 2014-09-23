@@ -1,4 +1,4 @@
-(defproject i9n "0.2.5"
+(defproject i9n "0.2.6"
   :description "Fast interactive terminal (curses) UIs with cljs and nodejs."
   :url "https://github.com/longstorm/i9n"
   :license {:name "Eclipse Public License"
