@@ -136,7 +136,8 @@
                  nav args)
         n (dissoc new-nav :current-is-dirty)]
     (if (:current-is-dirty new-nav)
-      (refresh (nav-entry/set-last n (-> n :current (nth 2) count)))
+      (refresh (nav-entry/set-last n (let [body (-> n :current (nth 2))]
+                                       (if (vector? body) (count body) 0))))
       n)))
 
 (defmethod custom-i9n-op :fix [[cmd & args] nav more]
