@@ -172,7 +172,7 @@
             (let [[action action-args i] args]
               (hra (action (assoc action-args :state (:state nav))) i hra nav)
               nav)
-            (ext/i9n-op op nav other)))
+            (ext/custom-i9n-op op nav other)))
         (assoc initial-nav :current current :pos 0)
         (a/tap mult (a/chan)))
        (a/put! in [:hop id]))

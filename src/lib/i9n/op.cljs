@@ -1,11 +1,11 @@
 (ns i9n.op
   (:require [i9n.nav-entry :as nav-entry]
-            [i9n.ext :refer [i9n-op]]))
+            [i9n.ext :refer [custom-i9n-op]]))
 
-(defmethod i9n-op :add [[cmd & args] nav more]
+(defmethod custom-i9n-op :add [[cmd & args] nav more]
   (nav-entry/add-to-hierarchy nav args))
 
-(defmethod i9n-op :stub [[cmd & args] nav more]
+(defmethod custom-i9n-op :stub [[cmd & args] nav more]
   (nav-entry/add-to-hierarchy
    nav args #(assoc-in %1 [:hierarchy %2 :dirty] true)))
 
@@ -23,10 +23,10 @@
          (assoc nav :pos k'))
        nav)))
 
-(defmethod i9n-op :select [[cmd & args] nav {:keys [widget render!]}]
+(defmethod custom-i9n-op :select [[cmd & args] nav {:keys [widget render!]}]
   (let [target (if (= 1 (count args)) args (reverse args))]
     (apply select-option widget render! nav target)))
 
-(defmethod i9n-op :dirty [[cmd & args] nav more]
+(defmethod custom-i9n-op :dirty [[cmd & args] nav more]
   (reduce (fn [n id] (assoc-in nav [:hierarchy id :dirty] true))
           nav args))

@@ -1,5 +1,5 @@
 (ns i9n.op.fix
-  (:require [i9n.ext :refer [i9n-op]]
+  (:require [i9n.ext :refer [custom-i9n-op]]
             [i9n.more :refer [index-of splice replace-at-indexes]]
             [i9n.nav-entry :as nav-entry]))
 
@@ -139,8 +139,8 @@
       (refresh (nav-entry/set-last n (-> n :current (nth 2) count)))
       n)))
 
-(defmethod i9n-op :fix [[cmd & args] nav more]
+(defmethod custom-i9n-op :fix [[cmd & args] nav more]
   (change nav args (:refresh more) :persist))
 
-(defmethod i9n-op :put [[cmd & args] nav more]
+(defmethod custom-i9n-op :put [[cmd & args] nav more]
   (change nav args (:refresh more) false))
