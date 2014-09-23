@@ -4,15 +4,12 @@
             [secretary.core :as secretary]
             [i9n.ext :as ext]
             [i9n.nav-entry :as nav-entry]
-            [i9n.more :refer [channel? index-of]]
+            [i9n.more :refer [channel?]]
             [i9n.step :refer [set-route-dispatch!]]
             [i9n.os.term :as term :refer [widget?]]
             [i9n.os.widgets :as widgets]))
 
-(defmulti custom-nav-action (fn [action-map more] (:nav-action action-map)))
 (set-route-dispatch! secretary/dispatch!)
-
-(defmethod custom-nav-action :default [action-map more] nil)
 
 (declare create-pane)
 
@@ -165,9 +162,9 @@
             :i9n (do (ext/custom-i9n (first args)
                                      {:parent widget :nav nav :cfg cfg})
                      nav)
-            :nav-action
+            :i9n-action
             (let [[action-map i] args]
-              (custom-nav-action
+              (ext/custom-i9n-action
                action-map {:selected i :nav nav :channels channels
                            :handle-returned-action #(hra % i hra nav)})
               nav)
@@ -194,36 +191,3 @@
 (defn navigation-view
   ([nav-entries] (navigation-view nav-entries {}))
   ([nav-entries cfg] (navigation nav-entries cfg (widgets/list-view))))
-
-(defn pick-option
-  ([id title options settings]
-     [id title (pick-option id options settings)])
-  ([state-id options settings]
-     (let [action (or (:action settings)
-                      (constantly (or (:next settings)
-                                      (when-let [hop (:hop settings)]
-                                        {:nav-action :hop :action hop}))))]
-       (->>
-        options
-        (map (fn [option]
-               (let [i (index-of options option)]
-                 {:nav-action :pick-option
-                  :action action
-                  :args {:pick (if-let [handles (:handles settings)]
-                                 (nth handles i)
-                                 option)
-                         :pick-i i
-                         :state-id state-id
-                         :options options}})))
-        (interleave options)
-        (#(concat % (:more settings)))))))
-
-(defmethod custom-nav-action :pick-option
-  [{:keys [action args]} {:keys [selected channels]}]
-  (doto (:in channels)
-    (a/put! [:state (:state-id args) (:pick args)])
-    (a/put! [:handle-returned-action action args selected])))
-
-(defmethod custom-nav-action :hop
-  [{:keys [action args]} {:keys [channels]}]
-  (a/put! (:in channels) [:hop action]))
