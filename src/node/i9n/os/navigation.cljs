@@ -147,7 +147,7 @@
            channels (assoc (:watches cfg) :in in :mult mult)
            title-widget (term/create-text {:left 2 :content title})
            hra (create-handle-returned-action channels widget cfg)
-           other {:put! a/put! :render! term/render :widget widget
+           other {:render! term/render :widget widget
                   :channels channels :handle-returned-action hra
                   :refresh (create-refresh-fn widget title-widget
                                               hra channels cfg)}]

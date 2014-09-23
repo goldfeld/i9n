@@ -5,9 +5,9 @@
             [i9n.more :as more]
             [i9n.nav-entry :as nav-entry]))
 
-(defn may-flush [nav id chan put!]
+(defn may-flush [nav id chan]
   (if (and chan (get-in nav [:hierarchy id :dirty]))
-    (do (put! chan id)
+    (do (a/put! chan id)
         (assoc-in nav [:hierarchy id :dirty] false))
     nav))
 
@@ -19,14 +19,14 @@
 
 (defn hop [[id _ body :as entry] pos nav {:keys [refresh channels] :as more}]
   (-> (if (vector? body) (nav-entry/set-last nav (count body)) nav)
-      (may-flush id (:flush channels) (:put! more))
+      (may-flush id (:flush channels))
       (may-trigger id (:in channels) (:handle-returned-action more))
       (assoc :pos pos
              :current entry
              :rm-back (:back nav)
              :back (when-let [parent (get-in nav [:hierarchy id :link])]
-                     #((:put! more) (:in channels)
-                       [:set (:nav-entry parent) (:pos parent)])))
+                     #(a/put! (:in channels)
+                              [:set (:nav-entry parent) (:pos parent)])))
       refresh))
 
 (defn may-hop [target nav {:keys [may-create-link may-abort do-hop]}]
