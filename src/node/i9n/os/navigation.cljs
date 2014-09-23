@@ -120,19 +120,6 @@
       (term/render))
     (dissoc nav :rm-back)))
 
-(defn select-option
-  ([widget nav i relative-fn]
-     (select-option widget nav (relative-fn (:pos nav) i)))
-  ([widget {last :last :as nav} i]
-     (if-let [k (cond (= :last i) last
-                      (integer? i) (cond (> i last) last
-                                         (< i 0) 0
-                                         :else i))]
-       (do (.select widget k)
-           (term/render)
-           (assoc nav :pos k))
-       nav)))
-
 (defn create-handle-returned-action [{in :in :as channels} widget cfg]
   (fn [action i self {[id title body] :current :as nav}]
     (condp apply [action]
@@ -189,7 +176,8 @@
            channels (assoc (:watches cfg) :in in :mult mult)
            title-widget (term/create-text {:left 2 :content title})
            hra (create-handle-returned-action channels widget cfg)
-           other {:put! a/put! :channels channels :handle-returned-action hra
+           other {:put! a/put! :render! term/render :widget widget
+                  :channels channels :handle-returned-action hra
                   :refresh (create-refresh-fn widget title-widget
                                               hra channels cfg)}]
        (doto widget
@@ -200,14 +188,6 @@
        (a/reduce
         (fn [nav [cmd & args :as op]]
           (case cmd
-            :add (nav-entry/add-to-hierarchy nav args)
-            :stub (nav-entry/add-to-hierarchy
-                   nav args #(assoc-in %1 [:hierarchy %2 :dirty] true))
-            :select (let [target (if (= 1 (count args)) args (reverse args))]
-                      (apply select-option widget nav target))
-            :dirty (reduce (fn [n id]
-                             (assoc-in nav [:hierarchy id :dirty] true))
-                           nav args)
             :state (apply update-states nav args)
             :i9n (do (ext/custom-i9n (first args)
                                      {:parent widget :nav nav :cfg cfg})
