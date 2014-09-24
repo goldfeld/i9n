@@ -1,5 +1,6 @@
 (ns i9n.os.term
-  (:require [cljs.nodejs :as node]))
+  (:require [cljs.nodejs :as node]
+            [claude.process :as proc]))
 
 (def get-blessed (memoize #(node/require "blessed")))
 (def get-screen (memoize #(.screen (get-blessed))))
@@ -10,7 +11,7 @@
 (defn render-deferred []
   (js/setTimeout render 0))
 
-(def ^:private *active* (atom nil))
+(def exit proc/exit)
 
 (defn bind-global-keys
   ([key-arg fn]
@@ -20,6 +21,8 @@
        (.key screen (clj->js key-arg) fn)
        (doseq [[k f] (partition 2 args)]
          (.key screen (clj->js k) f)))))
+
+(def ^:private *active* (atom nil))
 
 (defn switch-active-view
   ([new-active main-widget]
