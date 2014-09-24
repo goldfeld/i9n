@@ -8,3 +8,6 @@
 
 (defmulti custom-i9n-action (fn [action-map more] (:i9n-action action-map)))
 (defmethod custom-i9n-action :default [action-map more] nil)
+
+(defmulti custom-i9n-step (fn [step-map nav more] (:i9n-step step-map)))
+(defmethod custom-i9n-step :default [step-map nav more] nav)

@@ -1,4 +1,4 @@
-(ns i9n.step)
+(ns i9n.core)
 
 (defmacro route [r params & body]
   (let [r' (clojure.string/replace (subs (str r) 1) "?" ":")

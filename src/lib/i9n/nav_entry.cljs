@@ -1,6 +1,6 @@
 (ns i9n.nav-entry
   "Pure, testable helpers for i9n.navigation & co."
-  (:require [i9n.step :refer [i9n-step]]))
+  (:require [i9n.ext :as ext]))
 
 (defn add-to-hierarchy
   ([nav nav-entries] (add-to-hierarchy nav nav-entries nil))
@@ -18,7 +18,7 @@
                         [:hierarchy id :data]
                         [title (if has-trigger (vec (butlast body)) body)])))
                  map? (if (contains? entry :i9n-step)
-                        (i9n-step entry n {})
+                        (ext/custom-i9n-step entry n {})
                         n)
                  n))
              nav nav-entries)))
