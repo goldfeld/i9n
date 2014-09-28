@@ -1,7 +1,6 @@
 (ns i9n.op.hop
   (:require [cljs.core.async :as a]
-            [i9n.ext :refer [custom-i9n-op]]
-            [i9n.step :refer [route-dispatch!]]
+            [secretary.core :as secretary]
             [i9n.more :as more]
             [i9n.nav-entry :as nav-entry]))
 
@@ -37,29 +36,10 @@
     (if-let [dest (get-in nav [:hierarchy target :data])]
       (may-abort target nav #(do-hop (into [target] dest)
                                      (may-create-link nav target)))
-      (if-let [routed (route-dispatch! (str "/" (more/decode-keyword target)))]
+      (if-let [routed (secretary/dispatch!
+                       (str "/" (more/decode-keyword target)))]
         (let [n (nav-entry/add-to-hierarchy nav [routed])
               id (first routed)]
           (may-abort id n #(do-hop (into [id] (get-in n [:hierarchy id :data]))
                                    (may-create-link n id))))
         nav))))
-
-(defmethod custom-i9n-op :next [[cmd & args] nav more]
-  (let [create-link (fn [n id] (assoc-in n [:hierarchy id :link]
-                                         {:nav-entry (:current nav)
-                                          :pos (nth args 1 0)}))]
-    (may-hop (first args) nav
-             {:may-create-link create-link
-              :do-hop #(hop %1 (nth args 2 0) %2 more)
-              :may-abort
-              (fn [id n do-hop]
-                (if (not= id (first (:current n))) (do-hop) n))})))
-
-(defmethod custom-i9n-op :hop [[cmd & args] nav more]
-  (may-hop (first args) nav
-           {:may-create-link (fn [n id] n)
-            :do-hop #(hop %1 (nth args 1 0) %2 more)
-            :may-abort (fn [id _ do-hop] (do-hop))}))
-
-(defmethod custom-i9n-op :set [[cmd & [nav-entry go-to]] nav more]
-  (hop nav-entry (or go-to 0) nav more))

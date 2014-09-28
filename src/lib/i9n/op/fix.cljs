@@ -1,6 +1,5 @@
 (ns i9n.op.fix
-  (:require [i9n.ext :refer [custom-i9n-op]]
-            [i9n.more :refer [index-of splice replace-at-indexes]]
+  (:require [i9n.more :refer [index-of splice replace-at-indexes]]
             [i9n.nav-entry :as nav-entry]))
 
 (defn noop-fix [nav _ _] nav)
@@ -129,6 +128,10 @@
                               (apply-fix n [:hierarchy id :data 0]
                                          [:hierarchy id :data 1])
                               n)]
+                     (comment when the change to the current only
+                              involves labels and not actions,
+                              can just set-items or do a diff
+                              resolve for long lists)
                      (if (= id current-id)
                        (-> (apply-fix n' [:current 1] [:current 2])
                            (assoc :current-is-dirty true))
@@ -139,9 +142,3 @@
       (refresh (nav-entry/set-last n (let [body (-> n :current (nth 2))]
                                        (if (vector? body) (count body) 0))))
       n)))
-
-(defmethod custom-i9n-op :fix [[cmd & args] nav more]
-  (change nav args (:refresh more) :persist))
-
-(defmethod custom-i9n-op :put [[cmd & args] nav more]
-  (change nav args (:refresh more) false))

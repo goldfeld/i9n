@@ -2,14 +2,11 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :as a]
             [secretary.core :as secretary]
-            [i9n.ext :as ext]
+            [i9n.ext :refer [custom-i9n-op]]
             [i9n.nav-entry :as nav-entry]
             [i9n.more :refer [channel?]]
-            [i9n.step :refer [set-route-dispatch!]]
             [i9n.os.term :as term :refer [widget?]]
             [i9n.os.widgets :as widgets]))
-
-(set-route-dispatch! secretary/dispatch!)
 
 (declare create-pane)
 
@@ -147,7 +144,8 @@
            channels (assoc (:watches cfg) :in in :mult mult)
            title-widget (term/create-text {:left 2 :content title})
            hra (create-handle-returned-action channels widget cfg)
-           other {:render! term/render :widget widget
+           other {:render! term/render :widget widget :cfg cfg
+                  :select! (fn [widget i] (.select widget i))
                   :channels channels :handle-returned-action hra
                   :refresh (create-refresh-fn widget title-widget
                                               hra channels cfg)}]
@@ -157,22 +155,7 @@
           "j" #(a/put! in [:select + 1]))
          (.prepend title-widget))
        (a/reduce
-        (fn [nav [cmd & args :as op]]
-          (case cmd
-            :i9n (do (ext/custom-i9n (first args)
-                                     {:parent widget :nav nav :cfg cfg})
-                     nav)
-            :i9n-action
-            (let [[action-map i] args]
-              (ext/custom-i9n-action
-               action-map {:selected i :nav nav :channels channels
-                           :handle-returned-action #(hra % i hra nav)})
-              nav)
-            :handle-returned-action
-            (let [[action action-args i] args]
-              (hra (action (assoc action-args :state (:state nav))) i hra nav)
-              nav)
-            (ext/custom-i9n-op op nav other)))
+        (fn [nav op] (custom-i9n-op op nav other))
         (assoc initial-nav :current current :pos 0)
         (a/tap mult (a/chan)))
        (a/put! in [:hop id]))

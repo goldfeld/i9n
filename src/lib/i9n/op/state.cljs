@@ -1,6 +1,5 @@
 (ns i9n.op.state
-  (:require [i9n.nav-entry :as nav-entry]
-            [i9n.ext :refer [custom-i9n-op]]))
+  (:require [i9n.nav-entry :as nav-entry]))
 
 (defn update-state [nav state-id state-val]
   (if-let [{:keys [set deps]} (get-in nav [:state state-id])]
@@ -27,6 +26,3 @@
                       dpdnts)
               (update-state n state-id state-val)))
           nav (partition 2 id-state-pairs)))
-
-(defmethod custom-i9n-op :state [[cmd & args] nav more]
-  (apply update-states nav args))
