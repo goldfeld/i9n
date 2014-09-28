@@ -1,10 +1,10 @@
 (defproject i9n "0.2.6"
-  :description "Fast interactive terminal (curses) UIs with cljs and nodejs."
-  :url "https://github.com/longstorm/i9n"
+  :description "Fast declarative terminal (curses) UIs with cljs and nodejs."
+  :url "https://github.com/goldfeld/i9n"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :scm {:name "git"
-        :url "https://github.com/longstorm/i9n.git"}
+        :url "https://github.com/goldfeld/i9n.git"}
   :aliases {"cleantest" ["do" "clean," "cljsbuild" "once," "test,"]
             "autotest" ["do" "clean," "cljsbuild" "auto" "test"]}
   :source-paths ["src/lib" "src/node" "src/plugins"]
