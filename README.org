@@ -1,30 +1,72 @@
-* enlightened
+* i9n
 
-A Clojure library designed to ... well, that part is up to you.
+A ClojureScript library for creating terminal-based, curses
+interfaces. Being built off Node.js allows applications made with
+=i9n= to be snappy, light and mostly instant to boot up. Don't worry
+much if you're not into node, most of the little beast is half-hidden
+behind bars.
+
+This project's main goal is to simultaneously allow simple interfaces
+to be done declaratively--hopefully within the grasp of someone who
+isn't a programmer (though don't ask me why this someone would want a
+terminal UI)--and provide a simple, solid backbone for complex curses
+applications like file managers, music players, ascii-based games and
+even text editors, all the while remaining a lib and not a framework,
+by having little enough opinion on the rest of your code except for
+the use of =core.async=.
+
+The way =i9n= (standing for /interaction/) lays out interfaces is
+through a navigation abstraction, composed of screens--think like
+pages in a website, though any given screen can be highly interactive
+much like a Single Page Application in web dev. There's a special
+declarative ease reserved for list-based navigation, because it's such
+a common use case (e.g. menus), but screens can contain any number of
+UI widgets and interactions in addition to lists.
+
+These widgets, interactions and the navigation hierarchy are all
+represented declaratively by plain Clojure data structures like
+vectors and maps, though of course "declarative" ends whenever you
+plug in fuctions to trigger custom actions (which you are very much
+encouraged to do all the time.) Here's a full interface's navigation
+hierarchy:
+
+#+begin_src clojure
+[["my german vocab" ["review words" :review
+                     "add new word" :add
+                     "quit" i9n-os/exit]]
+ [:review "review" ["ich" (fn [] "I")
+                    "bin" (fn [] "am")
+                    "praktisch" (fn [] "practical")
+                    "perfekt" (constantly "perfect")]]
+ [:add "add word" "not implemented (or really necessary) yet."]]
+#+end_src
+
+The example above fully describes a flashcard (memorization) program
+which lets you achieve a four-word strong German vocabulary and form a
+full sentence. Of course, a more expansive vocabulary should probably
+be backed by reading word/translation pairs from a text file. The
+first screen, entitled "my german vocab", is where the application
+will start, and is implicitly given the id =:root=. The others have
+ids =:review= and =:add= which we use as /keyword actions/ on the root
+menu screen to link them up. Actions can also be arbitrary functions,
+as shown by the especially useful functions that return a string,
+which declaratively generates an action to add that string as an
+alert-like message beside the menu option selected (in these cases the
+German words you're memorizing.)
+
+Interfaces in =i9n= are meant to be asynchronous, lazy and responsive
+through the use of =core.async= and an input channel where you can put
+messages. This channel then serves as the backbone of the navigation's
+loop, as every operation message (adding and modifying screens, moving
+from screen to screen, among others) is processed sequentially and
+synchronously, even as they're accepted asynchronously. This
+guarantees, for instance, that you can send an operation message to
+add a new screen, then another message to go to this new screen, and
+be sure the screen exists in the navigation's hierarchy.
 
 ** Usage
 
-FIXME
-
 *** Navigation
-
-The navigation widget is a very high-level, declarative way to build
-list-based interfaces. The abstraction is that of interconnected menu
-screens, which can nonetheless be far more interactive and
-programmatic than a menu would normally be, thus the more general term
-'navigation'.
-
-It allows for UIs that are asynchronous, lazy and responsive through
-the use of a simple core.async messaging protocol. It all starts with
-passing a channel within the =cfg= parameter (a map), through its
-=:chan= property. If that is not supplied, the navigation widget will
-create its own channel internally which then won't be accessible to
-the user.
-
-This channel serves as the backbone of the navigation widget's loop,
-as every operation (adding and modifying screens, moving from screen
-to screen, among other more meta commands) is processed sequentially,
-even as they're accepted asynchronously.
 
 **** Operations
 
