@@ -1,8 +1,8 @@
 (ns i9n.core)
 
-(defmacro n [arglist & body]
+#_(defmacro n [arglist & body]
   (let [{plainargs :p otherargs :o}
-        (group-by #(if (symbol? %) :p :o) 'arglist)
+        (group-by #(if (symbol? %) :p :o) `[~@arglist])
         destructargs (->> (reduce (fn [darglist a]
                                     (condp apply [a]
                                       vector? (conj darglist
@@ -10,16 +10,15 @@
                                       map? (conj darglist
                                                  [a (-> a last last keyword)])
                                       darglist))
-                                  [] otherargs)
+                                  [] `~otherargs)
                           (mapcat (fn [[dstrct kw]] [dstrct kw])))
-        args (->> (mapcat (fn [a] [a (keyword a)]) plainargs)
-                  (concat destructargs)
-                  (apply hash-map))]
+        args (->> (mapcat (fn [a] [a (keyword a)]) `~plainargs)
+                  (concat destructargs))
+        m (apply hash-map `~args)]
     `{:i9n-action :n-fn 
       :requested-args (take-nth 2 (rest ~args))
       :action
-      (fn [{~@args :as m#}]
-        ~@body)}))
+      (fn [~m] ~@body)}))
 
 (defmacro route [r params & body]
   (let [r' (clojure.string/replace (subs (str r) 1) "?" ":")
