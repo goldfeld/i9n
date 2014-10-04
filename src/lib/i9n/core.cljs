@@ -119,6 +119,18 @@
 (defmethod ext/custom-i9n-op :set [[cmd nav-entry go-to] nav more]
   (op-hop/hop nav-entry (or go-to 0) nav more))
 
+(defmethod ext/custom-i9n-op :back
+  [[cmd times] {back :back :as nav} {{in :in} :channels}]
+  (when back
+    (let [x (or times 1)]
+      (cond
+       (= 1 x) (back)
+       (and (integer? x) (> x 0)) (do (back)
+                                      (a/put! in [:back (dec x)]))
+       :else (throw (js/Error. (str "custom-i9n-op :back takes only"
+                                    "an optional positive integer."))))))
+  nav)
+
 (defmethod ext/custom-i9n-op :i9n-action
   [[cmd & args] nav {hra :handle-returned-action :keys [widget cfg channels]}]
   (let [[action-map i] args]
