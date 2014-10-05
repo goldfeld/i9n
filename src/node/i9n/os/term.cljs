@@ -1,5 +1,6 @@
 (ns i9n.os.term
   (:require [cljs.nodejs :as node]
+            [cljs.core.async :as a]
             [claude.process :as proc]))
 
 (def get-blessed (memoize #(node/require "blessed")))
@@ -89,3 +90,15 @@
 (defn unset-keys [widget & keymaps]
   (doseq [[key fn] (partition 2 keymaps)]
     (.unkey widget (->js key) fn)))
+
+(defn copy [text]
+  (let [chan (a/chan)
+        clipboard (.. (node/require "copy-paste") noConflict silent)]
+    (.copy clipboard text (fn [err res] (a/put! chan (or err res))))
+    chan))
+
+(defn paste []
+  (let [chan (a/chan)
+        clipboard (.. (node/require "copy-paste") noConflict silent)]
+    (.paste clipboard (fn [err res] (a/put! chan res)))
+    chan))
