@@ -1,7 +1,6 @@
-(ns i9n-demo.main
+(ns kitchen-sink.main
   (:require [cljs.nodejs :as node]
             [cljs.core.async :as a]
-            [clojure.string :as strng]
             [claude.process :as proc]
             [i9n.os.term :as term]
             [i9n.os.navigation :refer [navigation-view]]))
@@ -23,7 +22,7 @@
 
 (def lorem
   (str "Lorem ipsum dolores siamet"
-       (strng/join (repeat 888 " lorem ipsum dolores siamet"))
+       (clojure.string/join (repeat 888 " lorem ipsum dolores siamet"))
        ". Lorem ipsum dolores siamet."))
 
 (defn nav []

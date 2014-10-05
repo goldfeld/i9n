@@ -14,11 +14,11 @@
                  [longstorm/claude "0.1.4"]
                  [secretary "1.2.1"]]
   :cljsbuild
-  {:builds [{:id "demo"
-             :source-paths ["src/lib" "src/node" "src/plugins" "demo"]
-             :compiler {:target :nodejs
-                        :output-to "resources/public/demo.js"
-                        :optimizations :simple}}
+  {:builds [{:id "example-kitchen-sink"
+             :source-paths ["src/lib" "src/node" "src/plugins"
+                            "examples/kitchen_sink/src"]
+             :compiler {:target :nodejs :optimizations :simple
+                        :output-to "examples/kitchen_sink/kitchen_sink.js"}}
             {:id "test"
              :source-paths ["src/lib" "test"]
              :notify-command ["phantomjs"
