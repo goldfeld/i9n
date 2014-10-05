@@ -14,7 +14,12 @@
                  [longstorm/claude "0.1.4"]
                  [secretary "1.2.1"]]
   :cljsbuild
-  {:builds [{:id "example-kitchen-sink"
+  {:builds [{:id "example-clipper"
+             :source-paths ["src/lib" "src/node" "src/plugins"
+                            "examples/clipper/src"]
+             :compiler {:target :nodejs :optimizations :simple
+                        :output-to "examples/clipper/clipper.js"}}
+            {:id "example-kitchen-sink"
              :source-paths ["src/lib" "src/node" "src/plugins"
                             "examples/kitchen_sink/src"]
              :compiler {:target :nodejs :optimizations :simple
