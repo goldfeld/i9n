@@ -7,7 +7,7 @@
         :url "https://github.com/goldfeld/i9n.git"}
   :aliases {"cleantest" ["do" "clean," "cljsbuild" "once," "test,"]
             "autotest" ["do" "clean," "cljsbuild" "auto" "test"]}
-  :source-paths ["src/lib" "src/node" "src/plugins"]
+  :source-paths ["src/lib" "src/os" "src/plugins"]
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/clojurescript "0.0-2202"]
                  [org.clojure/core.async "0.1.256.0-1bf8cf-alpha"]
@@ -15,12 +15,12 @@
                  [secretary "1.2.1"]]
   :cljsbuild
   {:builds [{:id "example-clipper"
-             :source-paths ["src/lib" "src/node" "src/plugins"
+             :source-paths ["src/lib" "src/os" "src/plugins"
                             "examples/clipper/src"]
              :compiler {:target :nodejs :optimizations :simple
                         :output-to "examples/clipper/clipper.js"}}
             {:id "example-kitchen-sink"
-             :source-paths ["src/lib" "src/node" "src/plugins"
+             :source-paths ["src/lib" "src/os" "src/plugins"
                             "examples/kitchen_sink/src"]
              :compiler {:target :nodejs :optimizations :simple
                         :output-to "examples/kitchen_sink/kitchen_sink.js"}}

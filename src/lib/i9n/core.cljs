@@ -1,12 +1,20 @@
 (ns i9n.core
   (:require [cljs.core.async :as a]
             [secretary.core :as secretary]
+            [i9n.op.state :as op-state]
             [i9n.op.fix :as op-fix]
             [i9n.op.hop :as op-hop]
-            [i9n.op.state :as op-state]
+            [i9n.ui :as ui]
             [i9n.ext :as ext]
             [i9n.nav-entry :as nav-entry]
             [i9n.more :refer [index-of]]))
+
+;; set-impl! is called from os-specific code (e.g. node.js)
+(def impl (atom nil))
+(defn set-impl! [impl-map] (reset! impl impl-map))
+(def create-pane (ui/make-create-pane-impl impl))
+(def navigation (ui/make-navigation-impl impl create-pane))
+(def navigation-view (ui/make-navigation-view-impl impl navigation))
 
 ;;; UI HELPERS
 
@@ -139,8 +147,11 @@
                  :handle-returned-action #(hra % i hra nav)})
     nav))
 
-(defmethod ext/custom-i9n-op :i9n [[cmd & args] nav {:keys [widget cfg]}]
-  (do (ext/custom-i9n (first args) {:parent widget :nav nav :cfg cfg})
+(defmethod ext/custom-i9n-op :i9n
+  [[cmd & args] nav {:keys [widget cfg impl]}]
+  (do (ext/custom-i9n (first args)
+                      {:parent widget :nav nav :cfg cfg}
+                      impl)
       nav))
 
 (defmethod ext/custom-i9n-op :handle-returned-action

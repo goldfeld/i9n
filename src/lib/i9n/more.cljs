@@ -25,6 +25,9 @@
 (defn channel? [x]
   (satisfies? cljs.core.async.impl.protocols/Channel x))
 
+(defn widget? [x]
+  (.hasOwnProperty x "screen"))
+
 (defn route->keyword [s]
   (->> (clojure.string/split s #"[\\/]" 2)
        (map #(clojure.string/replace % "%20" "_+_"))

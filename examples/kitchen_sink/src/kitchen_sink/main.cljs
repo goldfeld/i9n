@@ -2,8 +2,8 @@
   (:require [cljs.nodejs :as node]
             [cljs.core.async :as a]
             [claude.process :as proc]
-            [i9n.os.term :as term]
-            [i9n.os.navigation :refer [navigation-view]]))
+            [i9n.core :as i9n :include-macros true]
+            [i9n.node.os :as os]))
 
 (defn sad-async []
   (let [chan (a/chan)]
@@ -17,7 +17,7 @@
       (a/put! [:fix [:here 0 "ho"]])
       (a/put! [:next :hip])
       (a/close!))
-    (term/render-deferred)
+    (os/render-deferred)
     chan))
 
 (def lorem
@@ -29,20 +29,22 @@
   [["inkstick" ["view text" :Text
                 "view book" :Book
                 "test" :test
+                #_"n-fn" #_(n [nav] (js/setTimeout #(.log js/console (clj->js nav)) 100)
+                          :Text)
                 "quit" #(proc/exit)]]
    [:Text "Text" lorem]
    [:Book "Book" ["ch.1" lorem "ch.2" "Second part" "ch.3" "The End"]]
    [:test "focus" ["sadly asynchronous" sad-async
                    "also sad but hip" :hip
-                   "sysiphus" #(navigation-view (nav))
+                   "sysiphus" #(i9n/navigation-view (nav))
                    "jit" (fn [] [[:new "Menu" ["a" :ho "d" :d]]
                                  [:d "d" ["a" :ho]]])]]
    [:hip "" sad-async]
    [:ho "go" ["hum" (constantly "sad")]]])
 
 (defn -main [& input]
-  (term/bind-global-keys ["C-c"] #(proc/exit))
+  (os/bind-global-keys ["C-c"] #(proc/exit))
   (let [[cmd & args] input]
-    (navigation-view (nav))))
+    (i9n/navigation-view (nav))))
 
 (set! *main-cli-fn* -main)
