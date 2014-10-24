@@ -4,6 +4,7 @@
             [i9n.op.state :as op-state]
             [i9n.op.fix :as op-fix]
             [i9n.op.hop :as op-hop]
+            [i9n.keymap :as keymap]
             [i9n.ui :as ui]
             [i9n.ext :as ext]
             [i9n.nav-entry :as nav-entry]
@@ -138,6 +139,21 @@
        :else (throw (js/Error. (str "custom-i9n-op :back takes only"
                                     "an optional positive integer."))))))
   nav)
+
+(defmethod ext/custom-i9n-op :pick
+  [[cmd i] {:keys [pick pos] :as nav} {:keys [channels]}]
+  (when pick (pick (or i pos) nav))
+  nav)
+
+(defmethod ext/custom-i9n-op :key [[cmd & args] nav {:keys [channels]}]
+  (let [[action keystate] (keymap/handle-key (first args)
+                                             (:keystate nav)
+                                             (:keymap nav))]
+    (when action (a/put! (:in channels) (action nav)))
+    (assoc nav :keystate keystate)))
+
+(defmethod ext/custom-i9n-op :bind [[cmd kstr action] nav more]
+  (update-in nav [:keymap] keymap/bind (keymap/str->kseq kstr) action))
 
 (defmethod ext/custom-i9n-op :i9n-action
   [[cmd & args] nav {hra :handle-returned-action :keys [widget cfg channels]}]

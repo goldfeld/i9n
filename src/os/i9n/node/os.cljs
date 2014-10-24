@@ -194,7 +194,7 @@
 (defn create-args [type]
   (case type
     :list [create-list
-           [p/centered p/half-height p/line-bordered p/interactive-vi]
+           [p/centered p/half-height p/line-bordered]
            {:align "left"
             :width "75%"
             :fg "blue"

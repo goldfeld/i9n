@@ -4,6 +4,7 @@
             [secretary.core :as secretary]
             [i9n.ext :refer [custom-i9n-op]]
             [i9n.nav-entry :as nav-entry]
+            [i9n.keymap :as keymap]
             [i9n.more :refer [channel? widget?]]))
 
 (defn handle-map-action
@@ -67,9 +68,9 @@
       nil? nil
       widget? (do ((:detach impl) widget) action))))
 
-(defn create-selection-fn
-  [widget {[id title body] :current :as nav} hra {in :in :as channels} cfg impl]
-  (fn [_ i]
+(defn create-pick-fn
+  [widget hra {in :in :as channels} cfg impl]
+  (fn [i {[id title body] :current :as nav}]
     (let [action (create-action! body i #(a/put! in [:hop id %])
                                  widget (:keybinds cfg) impl)]
       (condp apply [action]
@@ -106,11 +107,10 @@
       (when options
         (doto widget
           ((:set-items impl) (take-nth 2 options))
-          ((:select impl) (:pos nav))
-          ((:on impl) "select"
-           (create-selection-fn widget nav hra channels cfg impl))))
+          ((:select impl) (:pos nav))))
       ((:render impl)))
-    (dissoc nav :rm-back)))
+    (-> (assoc nav :pick (create-pick-fn widget hra channels cfg impl))
+        (dissoc :rm-back))))
 
 (def config-default
   {:keybinds {:quit ["q" "escape"]
@@ -138,18 +138,14 @@
                     :refresh (create-refresh-fn widget title-widget
                                                 hra channels cfg @impl)}]
          (doto widget
-           ((:set-keys @impl)
-            "d" #(a/put! in [:fix [nil :remove]])
-            "k" #(a/put! in [:select - 1])
-            "j" #(a/put! in [:select + 1])
-            )
-           #_(.on "keypress" (fn [ch k]
-                               (a/put! in [:key (keymap/get-key-name
-                                                 (or (aget k "name") ch))])))
+           ((:on @impl) "keypress"
+            (fn [ch k]
+              (a/put! in [:key (or (aget k "name") ch)])))
            ((:prepend @impl) title-widget))
          (a/reduce
           (fn [nav op] (custom-i9n-op op nav other))
-          (assoc initial-nav :current current :pos 0)
+          (assoc initial-nav :current current :pos 0
+                 :keymap keymap/vi :keystate [])
           (a/tap mult (a/chan)))
          (a/put! in [:hop id]))
        widget)))
