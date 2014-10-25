@@ -71,5 +71,10 @@
    "l" :pick, "\\RIGHT" :pick, "\\ENTER" :pick})
 
 (def vi
-  (reduce-kv (fn [km kstr v] (bind km (str->kseq kstr) (get actions v)))
+  (reduce-kv (fn [km kstr v]
+               (bind km (str->kseq kstr)
+                     (condp apply [v]
+                       keyword? (get actions v)
+                       fn? v
+                       (fn [n] []))))
              {} vi-actions))
