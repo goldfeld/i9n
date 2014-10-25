@@ -42,11 +42,13 @@
       (throw (js/Error. (str "Invalid escape sequence in binding '" s "'")))
       (:kseq result))))
 
+(def bound? (every-pred identity (complement true?)))
+
 (defn bind
   ([km kseq action] (bind km kseq action kseq))
   ([km kseq action prefix]
      (if (seq prefix)
-       (if (get km prefix)
+       (if (bound? (get km prefix))
          (throw (js/Error. (str "Can't bind key sequence '" (apply str kseq)
                                 "', '" (apply str prefix) "' already bound.")))
          (bind km kseq action (butlast prefix)))
