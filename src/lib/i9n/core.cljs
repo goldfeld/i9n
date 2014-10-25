@@ -149,7 +149,9 @@
   (let [[action keystate] (keymap/handle-key (first args)
                                              (:keystate nav)
                                              (:keymap nav))]
-    (when action (a/put! (:in channels) (action nav)))
+    (when action
+      (doseq [act (action nav)]
+        (a/put! (:in channels) act)))
     (assoc nav :keystate keystate)))
 
 (defmethod ext/custom-i9n-op :bind [[cmd kstr action] nav more]

@@ -55,12 +55,12 @@
                           (repeat (dec (count kseq)) true))))))
 
 (def actions
-  {:down (fn [n] [:select + 1])
-   :up (fn [n] [:select - 1])
-   :top (fn [n] [:select 0])
-   :bottom (fn [n] [:select (:last n)])
-   :back (fn [n] [:back])
-   :pick (fn [n] [:pick])})
+  {:down (fn [n] [[:select + 1]])
+   :up (fn [n] [[:select - 1]])
+   :top (fn [n] [[:select 0]])
+   :bottom (fn [n] [[:select (:last n)]])
+   :back (fn [n] [[:back]])
+   :pick (fn [n] [[:pick]])})
 
 (def vi-actions
   {"j" :down, "\\DOWN" :down, "k" :up, "\\UP" :up
