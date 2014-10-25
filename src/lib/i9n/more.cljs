@@ -9,7 +9,7 @@
 
 (defn splice [coll idx cnt & items]
   (let [[a b] (split-at idx coll)]
-    (concat a items (drop cnt b))))
+    (vec (concat a items (drop cnt b)))))
 
 (defn replace-at-indexes
   "Replaces elements at coll at the given indexes with the given
