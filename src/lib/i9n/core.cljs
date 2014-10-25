@@ -84,10 +84,9 @@
                       (integer? i) (cond (> i last) last
                                          (< i 0) 0
                                          :else i))]
-       (let [k' k]
-         (select! widget k')
-         (render!)
-         (assoc nav :pos k'))
+       (do (select! widget k)
+           (render!)
+           (assoc nav :pos k))
        nav)))
 
 (defmethod ext/custom-i9n-op :select
