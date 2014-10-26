@@ -156,7 +156,8 @@
     ([nav-entries cfg] (navigation nav-entries cfg ((:create @impl) :list)))
     ([nav-entries cfg list]
        (let [{entries :xs
-              root :x} (group-by #(if (= 2 (count %)) :x :xs) nav-entries)]
+              root :x} (group-by #(if (and (vector? %) (= 2 (count %))) :x :xs)
+                                 nav-entries)]
          (create-pane-impl (cons :root (first root))
                            (nav-entry/create-nav (first root) entries)
                            list (merge config-default cfg))))))

@@ -118,24 +118,22 @@
   temporary-state nav-entry copy, regardless of the persist? param. As
   such, each operation may in fact be applied to both hierarchy and
   current entry, to one of the two, or to none at all."
-  [nav args refresh persist?]
+  [nav args refresh persist? user-made?]
   (let [current-id (-> nav :current first)
         new-nav (reduce
                  (fn [n [target place & fix]]
-                   (let [id (or target current-id)
-                         apply-fix (create-fix place fix)
-                         n' (if persist?
-                              (apply-fix n [:hierarchy id :data 0]
-                                         [:hierarchy id :data 1])
-                              n)]
-                     (comment when the change to the current only
-                              involves labels and not actions,
-                              can just set-items or do a diff
-                              resolve for long lists)
-                     (if (= id current-id)
-                       (-> (apply-fix n' [:current 1] [:current 2])
-                           (assoc :current-is-dirty true))
-                       n')))
+                   (let [id (or target current-id)]
+                     (if (and user-made? (not (-> n :hierarchy id :editable)))
+                       n
+                       (let [apply-fix (create-fix place fix)
+                             n' (if persist?
+                                  (apply-fix n [:hierarchy id :data 0]
+                                             [:hierarchy id :data 1])
+                                  n)]
+                         (if (= id current-id)
+                           (-> (apply-fix n' [:current 1] [:current 2])
+                               (assoc :current-is-dirty true))
+                           n')))))
                  nav args)
         n (dissoc new-nav :current-is-dirty)]
     (if (:current-is-dirty new-nav)

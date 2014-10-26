@@ -2,23 +2,25 @@
   "Pure, testable helpers for i9n.navigation & co."
   (:require [i9n.ext :as ext]))
 
+(defn assoc-entry [nav nav-entry update-in-entry]
+  (let [[id title body] nav-entry
+        has-trigger (and (vector? body) (odd? (count body)))
+        n (if has-trigger
+             (assoc-in nav [:hierarchy id :trigger] (last body))
+             nav)]
+    (-> (if update-in-entry (update-in-entry n id) n)
+        (assoc-in
+         [:hierarchy id :data]
+         [title (if has-trigger (vec (butlast body)) body)]))))
+
 (defn add-to-hierarchy
   ([nav nav-entries] (add-to-hierarchy nav nav-entries nil))
   ([nav nav-entries update-in-entry]
      (reduce (fn [n entry]
                (condp apply [entry]
-                 vector?
-                 (let [[id title body] entry
-                       has-trigger (and (vector? body) (odd? (count body)))
-                       n' (if has-trigger
-                            (assoc-in n [:hierarchy id :trigger] (last body))
-                            n)]
-                   (-> (if update-in-entry (update-in-entry n' id) n')
-                       (assoc-in
-                        [:hierarchy id :data]
-                        [title (if has-trigger (vec (butlast body)) body)])))
+                 vector? (assoc-entry n entry update-in-entry)
                  map? (if (contains? entry :i9n-step)
-                        (ext/custom-i9n-step entry n {})
+                        (ext/custom-i9n-step entry n {:assoc-entry assoc-entry})
                         n)
                  n))
              nav nav-entries)))

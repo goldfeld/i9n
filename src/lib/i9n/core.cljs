@@ -19,6 +19,10 @@
 
 ;;; UI HELPERS
 
+(defn editable [& nav-entry]
+  {:i9n-step :editable
+   :entry nav-entry})
+
 (defn pick-option
   ([id title options settings]
      [id title (pick-option id options settings)])
@@ -99,10 +103,19 @@
           nav args))
 
 (defmethod ext/custom-i9n-op :fix [[cmd & args] nav more]
-  (op-fix/change nav args (:refresh more) :persist))
+  (op-fix/change nav args (:refresh more) :persist false))
+
+(defmethod ext/custom-i9n-op :user-fix [[cmd & args] nav more]
+  (op-fix/change nav args (:refresh more) :persist :user-made))
 
 (defmethod ext/custom-i9n-op :put [[cmd & args] nav more]
-  (op-fix/change nav args (:refresh more) false))
+  (op-fix/change nav args (:refresh more) false false))
+
+(defmethod ext/custom-i9n-op :toggle-editable [[cmd id toggle] nav more]
+  (let [target (or id (-> nav :current first))]
+    (if toggle
+      (assoc-in nav [:hierarchy id :editable] toggle)
+      (update-in nav [:hierarchy id :editable] not))))
 
 (defmethod ext/custom-i9n-op :state [[cmd & args] nav more]
   (apply op-state/update-states nav args))
@@ -183,3 +196,8 @@
   [{:keys [route dispatch]} nav more]
   (secretary/add-route! (str "/" route) dispatch)
   nav)
+
+(defmethod ext/custom-i9n-step :editable
+  [{entry :entry} nav {assoc-entry :assoc-entry}]
+  (assoc-entry nav entry (fn [n id] (assoc-in n [:hierarchy id :editable]
+                                              true))))

@@ -26,14 +26,18 @@
        ". Lorem ipsum dolores siamet."))
 
 (defn nav []
-  [["inkstick" ["view text" :Text
-                "view book" :Book
-                "test" :test
-                #_"n-fn" #_(n [nav] (js/setTimeout #(.log js/console (clj->js nav)) 100)
-                          :Text)
-                "quit" #(proc/exit)]]
+  [["kitchen sink" ["view text" :Text
+                    "view book" :Book
+                    "edit items" :edit
+                    "test" :test
+                    #_"n-fn" #_(n [nav] (js/setTimeout #(.log js/console (clj->js nav)) 100)
+                                  :Text)
+                    "quit" #(proc/exit)]]
    [:Text "Text" lorem]
    [:Book "Book" ["ch.1" lorem "ch.2" "Second part" "ch.3" "The End"]]
+   (i9n/editable :edit "edit these items"
+                 (vec (interleave ["one" "two" "three" "four" "five" "six"]
+                                  (repeat nil))))
    [:test "focus" ["sadly asynchronous" sad-async
                    "also sad but hip" :hip
                    "sysiphus" #(i9n/navigation-view (nav))

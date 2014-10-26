@@ -63,7 +63,7 @@
    :bottom {:type :move :fn (fn [n] [[:select (:last n)]])}
    :back {:type :hop :fn (fn [n] [[:back]])}
    :pick {:type :control :fn (fn [n] [[:pick]])}
-   :remove {:fn (fn [n] [[:fix [nil :remove]]])}})
+   :remove {:fn (fn [n] [[:user-fix [nil :remove]]])}})
 
 (def vi-actions
   {"j" :down, "\\DOWN" :down, "k" :up, "\\UP" :up
@@ -71,7 +71,7 @@
    "h" :back, "\\LEFT" :back
    "l" :pick, "\\RIGHT" :pick, "\\ENTER" :pick
    "dd" :remove
-   "dj" {:type :move :fn (fn [n] [[:fix [nil [:remove 2]]]])}})
+   "dj" {:type :move :fn (fn [n] [[:user-fix [nil [:remove 2]]]])}})
 
 (def vi
   (reduce-kv (fn [km kstr v]
