@@ -1,6 +1,10 @@
 (ns i9n.keymap)
 
 (defn handle-key [k keystate km]
+  "Returns a 2-element vector containing an action and a new keystate;
+  an action is the bound value in a keymap km, and the keystate is the
+  current value of a state machine keeping track of keys pressed
+  sequentially to trigger a binding."
   (if (= k "escape")
     [nil []]
     (let [ks (conj keystate k)
@@ -26,7 +30,8 @@
               (cond
                escaping? (let [esc-seq (clojure.string/lower-case
                                         (str escape-seq c))]
-                           (if (some special [esc-seq])
+                           (if (or (some special [esc-seq])
+                                   (re-find #"^[csm]-.$" esc-seq))
                              (-> (update-in res [:kseq] conj esc-seq)
                                  (assoc :escaping? false
                                         :escape-seq ""))
@@ -34,7 +39,7 @@
                (= "\\" c) (-> (assoc res :escaping? true))
                :else (update-in res [:kseq] conj
                                 (if (some uppercase [c])
-                                  (str "S-" (clojure.string/lower-case c))
+                                  (str "s-" (clojure.string/lower-case c))
                                   c))))
             (reduce {:kseq [] :escape-seq "" :escaping? false}
                     (str-chars s)))]

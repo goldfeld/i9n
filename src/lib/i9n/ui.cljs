@@ -139,8 +139,9 @@
                                                 hra channels cfg @impl)}]
          (doto widget
            ((:on @impl) "keypress"
-            (fn [ch k]
-              (a/put! in [:key (or (aget k "name") ch)])))
+            (fn [ch keydata]
+              (a/put! in [:key (clojure.string/lower-case
+                                (aget keydata "full"))])))
            ((:prepend @impl) title-widget))
          (a/reduce
           (fn [nav op] (custom-i9n-op op nav other))
