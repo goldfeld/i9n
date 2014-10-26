@@ -3,6 +3,7 @@
 /checkouts
 /node_modules
 /resources/public
+/.gut
 pom.xml
 pom.xml.asc
 *.jar
