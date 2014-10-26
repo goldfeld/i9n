@@ -116,6 +116,8 @@
   (let [[create-fn mods props] (create-args type)]
     (create-fn overrides mods props)))
 
+(def set-title identity)
+
 (defn set-content
   "Sets the content of a widget. Any content parameters will be
   concat'ed together to make up a list of the lines of the widget's
@@ -190,6 +192,8 @@
        (.append pane viewer)
        (.focus viewer)
        viewer)))
+
+(def create-textbox identity)
 
 (defn create-args [type]
   (case type
