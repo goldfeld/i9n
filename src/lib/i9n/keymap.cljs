@@ -57,24 +57,27 @@
                           (repeat (dec (count kseq)) true))))))
 
 (def actions
-  {:down (fn [n] [[:select + 1]])
-   :up (fn [n] [[:select - 1]])
-   :top (fn [n] [[:select 0]])
-   :bottom (fn [n] [[:select (:last n)]])
-   :back (fn [n] [[:back]])
-   :pick (fn [n] [[:pick]])})
+  {:down {:type :move :fn (fn [n] [[:select + 1]])}
+   :up {:type :move :fn (fn [n] [[:select - 1]])}
+   :top {:type :move :fn (fn [n] [[:select 0]])}
+   :bottom {:type :move :fn (fn [n] [[:select (:last n)]])}
+   :back {:type :hop :fn (fn [n] [[:back]])}
+   :pick {:type :control :fn (fn [n] [[:pick]])}
+   :remove {:fn (fn [n] [[:fix [nil :remove]]])}})
 
 (def vi-actions
   {"j" :down, "\\DOWN" :down, "k" :up, "\\UP" :up
    "gg" :top, "G" :bottom
    "h" :back, "\\LEFT" :back
-   "l" :pick, "\\RIGHT" :pick, "\\ENTER" :pick})
+   "l" :pick, "\\RIGHT" :pick, "\\ENTER" :pick
+   "dd" :remove
+   "dj" {:type :move :fn (fn [n] [[:fix [nil [:remove 2]]]])}})
 
 (def vi
   (reduce-kv (fn [km kstr v]
                (bind km (str->kseq kstr)
                      (condp apply [v]
-                       keyword? (get actions v)
-                       fn? v
+                       keyword? (:fn (get actions v))
+                       map? (:fn v)
                        (fn [n] []))))
              {} vi-actions))
