@@ -113,9 +113,9 @@
 
 (defmethod ext/custom-i9n-op :toggle-editable [[cmd id toggle] nav more]
   (let [target (or id (-> nav :current first))]
-    (if toggle
-      (assoc-in nav [:hierarchy id :editable] toggle)
-      (update-in nav [:hierarchy id :editable] not))))
+    (if (nil? toggle)
+      (update-in nav [:hierarchy id :editable] not)
+      (assoc-in nav [:hierarchy id :editable] toggle))))
 
 (defmethod ext/custom-i9n-op :state [[cmd & args] nav more]
   (apply op-state/update-states nav args))
