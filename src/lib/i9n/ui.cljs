@@ -144,9 +144,17 @@
                                 (aget keydata "full"))])))
            ((:prepend @impl) title-widget))
          (a/reduce
-          (fn [nav op] (custom-i9n-op op nav other))
+          (fn [{last-op :last-op :as nav} op]
+            (let [timestamp (.getTime (js/Date.))]
+              (-> (custom-i9n-op op nav other)
+                  (assoc-in [:history timestamp]
+                            {:op op :nav (dissoc nav :history)
+                             :next [] :prev [last-op]})
+                  (update-in [:history last-op :next] conj timestamp)
+                  (assoc :last-op timestamp))))
           (assoc initial-nav :current current :pos 0
-                 :keymap keymap/vi :keystate [])
+                 :keymap keymap/vi :keystate []
+                 :last-op :start :history {:start {:next []}})
           (a/tap mult (a/chan)))
          (a/put! in [:hop id]))
        widget)))

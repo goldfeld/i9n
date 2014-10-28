@@ -120,6 +120,12 @@
 (defmethod ext/custom-i9n-op :state [[cmd & args] nav more]
   (apply op-state/update-states nav args))
 
+(defmethod ext/custom-i9n-op :undo
+  [[cmd & args] {:keys [last-op history] :as nav} {:keys [refresh]}]
+  (let [undo-candidates (get-in history [last-op :prev])
+        prev-nav (get-in history [(apply max undo-candidates) :nav])]
+    (refresh (assoc prev-nav :history history))))
+
 (defmethod ext/custom-i9n-op :next [[cmd & args] nav more]
   (let [create-link (fn [n id] (assoc-in n [:hierarchy id :link]
                                          {:nav-entry (:current nav)
