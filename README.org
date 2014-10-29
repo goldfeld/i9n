@@ -26,7 +26,7 @@ UI widgets and interactions in addition to lists.
 These widgets, interactions and the navigation hierarchy are all
 represented declaratively by plain Clojure data structures like
 vectors and maps, though of course "declarative" ends whenever you
-plug in fuctions to trigger custom actions (which you are very much
+plug in functions to trigger custom actions (which you are very much
 encouraged to do all the time.) Here's a full interface's navigation
 hierarchy:
 
