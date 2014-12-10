@@ -12,7 +12,8 @@
                  [org.clojure/clojurescript "0.0-2202"]
                  [org.clojure/core.async "0.1.256.0-1bf8cf-alpha"]
                  [longstorm/claude "0.1.4"]
-                 [secretary "1.2.1"]]
+                 [secretary "1.2.1"]
+                 [flow "0.1.4"]]
   :cljsbuild
   {:builds [{:id "example-clipper"
              :source-paths ["src/lib" "src/os" "src/plugins"
@@ -37,9 +38,10 @@
                                  "target/test.js"]}}
   :profiles
   {:dev {:dependencies [[com.cemerick/double-check "0.5.7-SNAPSHOT"]]
-         :node-dependencies [[phantomjs "1.9.x"]
+         :node-dependencies [[phantomjs "1.9.12"]
                              [blessed "0.0.29"]
-                             [copy-paste "0.3.0"]]
+                             [copy-paste "0.3.0"]
+                             [player "0.1.8"]]
          :hooks [leiningen.cljsbuild]
          :plugins [[lein-cljsbuild "1.0.3"]
                    [lein-npm "0.4.0"]
