@@ -3,7 +3,8 @@
             [cljs.core.async :as a]
             [claude.process :as proc]
             [i9n.core :as i9n :include-macros true]
-            [i9n.node.os :as os]))
+            [i9n.node.os :as os]
+            [i9n.ext.log]))
 
 (defn sad-async []
   (let [chan (a/chan)]
@@ -25,10 +26,11 @@
        (clojure.string/join (repeat 888 " lorem ipsum dolores siamet"))
        ". Lorem ipsum dolores siamet."))
 
-(defn nav []
+(defn nav [chan]
   [["kitchen sink" ["view text" :Text
                     "view book" :Book
                     "edit items" :edit
+                    "log hey" #(cljs.core.async/put! chan [:log "heeee"])
                     "test" :test
                     #_"n-fn" #_(n [nav] (js/setTimeout #(.log js/console (clj->js nav)) 100)
                                   :Text)
@@ -48,7 +50,8 @@
 
 (defn -main [& input]
   (os/bind-global-keys ["C-c"] #(proc/exit))
-  (let [[cmd & args] input]
-    (i9n/navigation-view (nav))))
+  (let [chan (a/chan)
+        [cmd & args] input]
+    (i9n/navigation-view (nav chan) {:chan chan})))
 
 (set! *main-cli-fn* -main)
