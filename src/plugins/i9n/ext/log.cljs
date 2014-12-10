@@ -5,10 +5,10 @@
             [claude.fs :refer [append-file-and-forget]]))
 
 (defmethod custom-i9n-op :log
-  [[cmd msg] nav {:keys [cfg]}]
+  [[cmd & msg] nav {:keys [cfg]}]
   (let [now (dt/now)]
     (append-file-and-forget (str "[" (dt/date-display now)
                                  "-" (dt/time-display now) "] "
-                                 msg "\n")
+                                 (clojure.string/join " " msg) "\n")
                             (or (:logfile cfg) (str (home) "/.i9n-log"))))
   nav)
