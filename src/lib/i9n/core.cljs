@@ -168,7 +168,7 @@
                                              (:keystate nav)
                                              (:keymap nav))]
     (when action
-      (doseq [act (action nav)]
+      (doseq [act (filter identity (action nav))]
         (a/put! (:in channels) act)))
     (assoc nav :keystate keystate)))
 
