@@ -5,7 +5,8 @@
   (if-let [{:keys [set deps]} (get-in nav [:state state-id])]
     (update-in nav [:state state-id :val]
                (fn [old-val]
-                 (set state-val old-val 
+                 (set (if (fn? state-val) (state-val old-val) state-val)
+                      old-val
                       (select-keys (:state nav) deps))))
     (assoc-in nav [:state state-id]
               {:val state-val
