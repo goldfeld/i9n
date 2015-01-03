@@ -61,7 +61,17 @@
               (interleave (iterate butlast (butlast kseq))
                           (repeat (dec (count kseq)) true))))))
 
-(def actions
+(defn make-keymap [action-map action-defs]
+  (reduce-kv (fn [km kstr action]
+               (bind km (str->kseq kstr)
+                     (condp apply [action]
+                       keyword? (or (:fn (get action-defs action))
+                                    (fn [n] [[action]]))
+                       map? (:fn action)
+                       (fn [n] []))))
+             {} action-map))
+
+(def action-defs
   {:down {:type :move :fn (fn [n] [[:select + 1]])}
    :up {:type :move :fn (fn [n] [[:select - 1]])}
    :top {:type :move :fn (fn [n] [[:select 0]])}
@@ -76,13 +86,7 @@
    "h" :back, "\\LEFT" :back
    "l" :pick, "\\RIGHT" :pick, "\\ENTER" :pick
    "dd" :remove
-   "dj" {:type :move :fn (fn [n] [[:user-fix [nil [:remove 2]]]])}})
+   "dj" {:type :move :fn (fn [n] [[:user-fix [nil [:remove 2]]]])}
+   "H" :history})
 
-(def vi
-  (reduce-kv (fn [km kstr v]
-               (bind km (str->kseq kstr)
-                     (condp apply [v]
-                       keyword? (:fn (get actions v))
-                       map? (:fn v)
-                       (fn [n] []))))
-             {} vi-actions))
+(def vi (make-keymap vi-actions action-defs))

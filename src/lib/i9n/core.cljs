@@ -95,8 +95,8 @@
 
 (defmethod ext/custom-i9n-op :select
   [[cmd & args] nav {:keys [widget render! select!]}]
-  (let [target (if (= 1 (count args)) args (reverse args))]
-    (apply select-option widget render! select! nav target)))
+  (apply select-option widget render! select! nav
+         (if (= 1 (count args)) args (reverse args))))
 
 (defmethod ext/custom-i9n-op :dirty [[cmd & args] nav more]
   (reduce (fn [n id] (assoc-in nav [:hierarchy id :dirty] true))
