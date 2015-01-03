@@ -1,6 +1,7 @@
 (ns i9n.core
   (:require [cljs.core.async :as a]
             [secretary.core :as secretary]
+            [flow.datetime :as dt]
             [i9n.op.state :as op-state]
             [i9n.op.fix :as op-fix]
             [i9n.op.hop :as op-hop]
@@ -119,6 +120,19 @@
 
 (defmethod ext/custom-i9n-op :state [[cmd & args] nav more]
   (apply op-state/update-states nav args))
+
+(defmethod ext/custom-i9n-op :history [[cmd & args] nav {{in :in} :channels}]
+  (a/put!
+   in [:next [:i9n-history "Navigation history"
+              (-> (reduce-kv (fn [labels timestamp {:keys [prev op n]}]
+                               (if (some #{:next :hop :set} [op])
+                                 (conj labels
+                                       (str (dt/time-display timestamp)
+                                            " - " (first (:current n))))
+                                 labels))
+                             {} (:history nav))
+                  (interleave (repeat nil)))]])
+  nav)
 
 (defmethod ext/custom-i9n-op :undo
   [[cmd & args] {:keys [last-op history] :as nav} {:keys [refresh]}]
