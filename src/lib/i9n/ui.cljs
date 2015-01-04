@@ -81,6 +81,14 @@
         fn? (hra (action) i hra nav)
         nil))))
 
+(defn preprocess-body [body]
+  (reduce (fn [coll [label action]]
+            (case label
+              :skip-lines (into coll (repeat (* 2 action) nil))
+              (conj coll label action)))
+          []
+          (partition 2 body)))
+
 (defn create-refresh-fn
   [widget title-widget hra channels cfg impl]
   (fn [{back :back rm-back :rm-back [id title bd] :current :as nav}]
@@ -88,7 +96,7 @@
           parse-body
           (fn [body]
             (condp apply [body]
-              vector? body
+              vector? (preprocess-body body)
               sequential? (vec body)
               string? (let [t ((:create-text-viewer impl) widget body)
                             b (or back (constantly nil))]
