@@ -189,11 +189,22 @@
 (defmethod ext/custom-i9n-op :bind [[cmd kstr action] nav more]
   (update-in nav [:keymap] keymap/bind (keymap/str->kseq kstr) action))
 
+(defn create-quick-fix-fn [in persist?]
+  (fn
+    ([body] (a/put! in [(if persist? :fix :put) [nil :body body]]))
+    ([title body]
+       (doto #(a/put! in [(if persist? :fix :put) [nil %1 %2]])
+         (apply [:title title])
+         (apply [:body body])))))
+
 (defmethod ext/custom-i9n-op :i9n-action
   [[cmd & args] nav {hra :handle-returned-action :keys [widget cfg channels]}]
-  (let [[action-map i] args]
+  (let [[action-map i] args
+        in (:in channels)]
     (ext/custom-i9n-action
      action-map {:selected i :nav nav :channels channels
+                 :put (create-quick-fix-fn in false)
+                 :fix (create-quick-fix-fn in :persist)
                  :handle-returned-action #(hra % i hra nav)})
     nav))
 

@@ -10,7 +10,7 @@
 (defn handle-map-action
   [action i {in :in}]
   (condp #(contains? %2 %1) action
-    :nav-action (a/put! in [:nav-action action i])
+    :i9n-action (a/put! in [:i9n-action action i])
     :i9n (a/put! in [:i9n action])
     nil))
 
