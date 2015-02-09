@@ -40,6 +40,7 @@
   {:dev {:dependencies [[com.cemerick/double-check "0.5.7-SNAPSHOT"]]
          :node-dependencies [[phantomjs "1.9.12"]
                              [blessed "0.0.29"]
+                             [blessed-contrib "0.0.8"]
                              [copy-paste "0.3.0"]]
          :hooks [leiningen.cljsbuild]
          :plugins [[lein-cljsbuild "1.0.3"]
