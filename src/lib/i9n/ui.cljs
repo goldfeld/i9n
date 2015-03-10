@@ -14,21 +14,21 @@
     :i9n (a/put! in [:i9n action])
     nil))
 
-(defn go-to-book-part [i chan book km keybinds impl titles parts]
+(defn go-to-book-part [i chan book km keybinds-pager impl titles parts]
   (apply (:unset-keys impl) book @km)
   ((:set-content impl) book (nth parts i))
   ((:render impl))
   (let [quit (fn [] (a/put! chan [:pos i]) (a/close! chan))
-        kmaps [(:quit keybinds) quit
-               (:left keybinds)
+        kmaps [(:quit keybinds-pager) quit
+               (:left keybinds-pager)
                (if (> i 0)
                  #(go-to-book-part (dec i) chan book km
-                                   keybinds impl titles parts)
+                                   keybinds-pager impl titles parts)
                  quit)
-               (:right keybinds)
+               (:right keybinds-pager)
                (if (< i (dec (count parts)))
                  #(go-to-book-part (inc i) chan book km
-                                   keybinds impl titles parts)
+                                   keybinds-pager impl titles parts)
                  (constantly nil))]]
     (reset! km kmaps)
     (apply (:set-keys impl) book kmaps)
@@ -72,7 +72,7 @@
   [widget hra {in :in :as channels} cfg impl]
   (fn [i {[id title body] :current :as nav}]
     (let [action (create-action! body i #(a/put! in [:hop id %])
-                                 widget (:keybinds cfg) impl)]
+                                 widget (:keybinds-pager cfg) impl)]
       (condp apply [action]
         keyword? (a/put! in [:next action i])
         string? ((:create-text-viewer impl) widget action)
@@ -92,7 +92,7 @@
 (defn create-refresh-fn
   [widget title-widget hra channels cfg impl]
   (fn [{back :back rm-back :rm-back [id title bd] :current :as nav}]
-    (let [l-binds (-> cfg :keybinds :left)
+    (let [l-binds (-> cfg :keybinds-pager :left)
           parse-body
           (fn [body]
             (condp apply [body]
@@ -121,14 +121,15 @@
         (dissoc :rm-back))))
 
 (def config-default
-  {:keybinds {:quit ["q" "escape"]
-              :left ["h" "left"]
-              :right ["l" "right"]
-              :page-up ["C-p"]
-              :page-down ["C-n"]
-              :cut-item ["d"]
-              :paste-below ["p"]
-              :paste-above ["P"]}})
+  {:keymap keymap/vi
+   :keybinds-pager {:quit ["q" "escape"]
+                    :left ["h" "left"]
+                    :right ["l" "right"]
+                    :page-up ["C-p"]
+                    :page-down ["C-n"]
+                    :cut-item ["d"]
+                    :paste-below ["p"]
+                    :paste-above ["P"]}})
 
 (defn make-create-pane-impl [impl]
   (fn create-pane
@@ -160,9 +161,9 @@
                              :next [] :prev [last-op]})
                   (update-in [:history last-op :next] conj timestamp)
                   (assoc :last-op timestamp))))
-          (assoc initial-nav :current current :pos 0
-                 :keymap keymap/vi :keystate []
-                 :last-op :start :history {:start {:next []}})
+          (assoc initial-nav  :pos 0, :last-op :start, :current current
+                 :keystate [], :keymap (:keymap cfg)
+                 :history {:start {:next []}})
           (a/tap mult (a/chan)))
          (a/put! in [:hop id]))
        widget)))
@@ -177,7 +178,10 @@
                                  nav-entries)]
          (create-pane-impl (cons :root (first root))
                            (nav-entry/create-nav (first root) entries)
-                           list (merge config-default cfg))))))
+                           list (let [keymap (merge (:keymap config-default)
+                                                    (:keybinds cfg))]
+                                  (-> (merge config-default cfg)
+                                      (assoc :keymap keymap))))))))
 
 (defn make-navigation-view-impl [impl navigation-impl]
   (fn navigation-view

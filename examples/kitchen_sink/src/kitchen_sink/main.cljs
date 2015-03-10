@@ -52,6 +52,9 @@
   (os/bind-global-keys ["C-c"] #(proc/exit))
   (let [chan (a/chan)
         [cmd & args] input]
-    (i9n/navigation-view (nav chan) {:chan chan})))
+    (i9n/navigation-view (nav chan)
+                         {:chan chan
+                          :keybinds {"o"
+                                     (fn [] (js/setTimeout #(.log js/console "main#57 " (clj->js @i9n.ext/operations)) 100))}})))
 
 (set! *main-cli-fn* -main)
