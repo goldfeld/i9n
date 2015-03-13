@@ -78,6 +78,7 @@
    :bottom {:type :move :fn (fn [n] [[:select (:last n)]])}
    :back {:type :hop :fn (fn [n] [[:back]])}
    :pick {:type :control :fn (fn [n] [[:pick]])}
+   :undo {:type :control :fn (fn [n] [[:undo]])}
    :remove {:fn (fn [n] [[:user-fix [nil :remove]]])}})
 
 (def vi-actions
@@ -87,6 +88,7 @@
    "l" :pick, "\\RIGHT" :pick, "\\ENTER" :pick
    "dd" :remove
    "dj" {:type :move :fn (fn [n] [[:user-fix [nil [:remove 2]]]])}
+   "u" :undo
    "H" :history})
 
 (def vi (make-keymap vi-actions action-defs))
