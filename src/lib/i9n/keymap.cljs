@@ -1,4 +1,5 @@
-(ns i9n.keymap)
+(ns i9n.keymap
+  (:require [clojure.string :as strng]))
 
 (defn handle-key [k keystate km]
   "Returns a 2-element vector containing an action and a new keystate;
@@ -15,7 +16,7 @@
         [action []]))))
 
 (defn str-chars [s]
-  (rest (clojure.string/split s #"")))
+  (rest (strng/split s #"")))
 
 (def uppercase
   (set (str-chars "ABCDEFGHIJKLMNOPQRSTUVWXYZ")))
@@ -28,7 +29,7 @@
   (let [result
         (-> (fn [{:keys [escape-seq escaping?] :as res} c]
               (cond
-               escaping? (let [esc-seq (clojure.string/lower-case
+               escaping? (let [esc-seq (strng/lower-case
                                         (str escape-seq c))]
                            (if (or (some special [esc-seq])
                                    (re-find #"^[csm]-.$" esc-seq))
@@ -39,7 +40,7 @@
                (= "\\" c) (-> (assoc res :escaping? true))
                :else (update-in res [:kseq] conj
                                 (if (some uppercase [c])
-                                  (str "s-" (clojure.string/lower-case c))
+                                  (str "s-" (strng/lower-case c))
                                   c))))
             (reduce {:kseq [] :escape-seq "" :escaping? false}
                     (str-chars s)))]

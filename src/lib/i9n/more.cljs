@@ -1,4 +1,6 @@
-(ns i9n.more)
+(ns i9n.more
+  (:require [cljs.core.async.impl.protocols :refer [Channel]]
+            [clojure.string :as strng]))
 
 (defn index-of
   ([coll item] (.indexOf (clj->js coll) (clj->js item)))
@@ -23,14 +25,14 @@
     coll))
 
 (defn channel? [x]
-  (satisfies? cljs.core.async.impl.protocols/Channel x))
+  (satisfies? Channel x))
 
 (defn widget? [x]
   (.hasOwnProperty x "screen"))
 
 (defn route->keyword [s]
-  (->> (clojure.string/split s #"[\\/]" 2)
-       (map #(clojure.string/replace % "%20" "_+_"))
+  (->> (strng/split s #"[\\/]" 2)
+       (map #(strng/replace % "%20" "_+_"))
        (apply keyword)))
 
 (defn encode-query-params [params]
@@ -43,10 +45,10 @@
 (defn encode-keyword
   ([s] (encode-keyword s {}))
   ([s query-params]
-     (->> (clojure.string/split (str s (encode-query-params query-params))
+     (->> (strng/split (str s (encode-query-params query-params))
                                 #"[\\/]" 2)
-          (map #(clojure.string/replace % #" " "_+_"))
+          (map #(strng/replace % #" " "_+_"))
           (apply keyword))))
 
 (defn decode-keyword [k]
-  (clojure.string/replace (subs (str k) 1) "_+_" " "))
+  (strng/replace (subs (str k) 1) "_+_" " "))
