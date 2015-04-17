@@ -24,25 +24,11 @@
              :source-paths ["src/lib" "src/os" "src/plugins"
                             "examples/kitchen_sink/src"]
              :compiler {:target :nodejs :optimizations :simple
-                        :output-to "examples/kitchen_sink/kitchen_sink.js"}}
-            {:id "test"
-             :source-paths ["src/lib" "test"]
-             :notify-command ["phantomjs"
-                              :cljs.test/runner "target/test.js"]
-             :compiler {:libs [""]
-                        :output-to "target/test.js"
-                        :optimizations :whitespace
-                        :pretty-print true}}]
-            
-   :test-commands {"unit-tests" ["phantomjs" :runner
-                                 "target/test.js"]}}
+                        :output-to "examples/kitchen_sink/kitchen_sink.js"}}]}
   :profiles
-  {:dev {:dependencies [[com.cemerick/double-check "0.5.7-SNAPSHOT"]]
-         :node-dependencies [[phantomjs "1.9.12"]
-                             [blessed "0.0.29"]
+  {:dev {:node-dependencies [[blessed "0.0.29"]
                              [blessed-contrib "0.0.8"]
                              [copy-paste "0.3.0"]]
          :hooks [leiningen.cljsbuild]
          :plugins [[lein-cljsbuild "1.0.3"]
-                   [lein-npm "0.4.0"]
-                   [com.cemerick/clojurescript.test "0.3.0"]]}})
+                   [lein-npm "0.4.0"]]}})

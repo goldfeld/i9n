@@ -1,6 +1,6 @@
 (ns i9n.core
+  (:require-macros [i9n.ext :refer [defop]])
   (:require [cljs.core.async :as a]
-            [cemerick.cljs.test :include-macros true :refer [is]]
             [secretary.core :as secretary]
             [flow.datetime :as dt]
             [i9n.op.state :as op-state]
@@ -8,7 +8,7 @@
             [i9n.op.hop :as op-hop]
             [i9n.keymap :as keymap]
             [i9n.ui :as ui]
-            [i9n.ext :as ext :include-macros true :refer [defop]]
+            [i9n.ext :as ext]
             [i9n.nav-entry :as nav-entry]
             [i9n.more :refer [index-of]]))
 
