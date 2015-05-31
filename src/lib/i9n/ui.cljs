@@ -2,7 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [cljs.core.async :as a]
             [secretary.core :as secretary]
-            [i9n.ext :refer [custom-i9n-op]]
+            [i9n.ext :as ext]
             [i9n.nav-entry :as nav-entry]
             [i9n.keymap :as keymap]
             [i9n.more :refer [channel? widget?]]))
@@ -12,7 +12,8 @@
   (condp #(contains? %2 %1) action
     :i9n-action (a/put! in [:i9n-action action i])
     :i9n (a/put! in [:i9n action])
-    nil))
+    nil)
+  nil)
 
 (defn go-to-book-part [i chan book km keybinds-pager impl titles parts]
   (apply (:unset-keys impl) book @km)
@@ -82,43 +83,46 @@
         nil))))
 
 (defn preprocess-body [body]
-  (reduce (fn [coll [label action]]
+  (reduce (fn [coll [label action :as option]]
             (case label
               :skip-lines (into coll (repeat (* 2 action) nil))
               (conj coll label action)))
           []
           (partition 2 body)))
 
+(defn parse-body [body widget l-binds back channels impl]
+  (condp apply [body]
+    vector? (preprocess-body body)
+    sequential? (vec body)
+    string? (let [t ((:create-text-viewer impl) widget body)
+                  b (or back (constantly nil))]
+              ((:set-key-once impl) t l-binds
+               #(do ((:detach impl) t) (b)))
+              nil)
+    channel? (do (a/pipe body (:in channels) false) nil)
+    map? (handle-map-action body nil channels)
+    fn? (parse-body (body) widget l-binds back channels impl)
+    nil))
+
 (defn create-refresh-fn
   [widget title-widget hra channels cfg impl]
   (fn [{back :back rm-back :rm-back [id title bd] :current :as nav}]
     (let [l-binds (-> cfg :keybinds-pager :left)
-          parse-body
-          (fn [body]
-            (condp apply [body]
-              vector? (preprocess-body body)
-              sequential? (vec body)
-              string? (let [t ((:create-text-viewer impl) widget body)
-                            b (or back (constantly nil))]
-                        ((:set-key-once impl) t l-binds
-                         #(do ((:detach impl) t) (b)))
-                        nil)
-              channel? (do (a/pipe body (:in channels) false) nil)
-              map? (handle-map-action body nil channels)
-              fn? (recur (body))
-              nil))
+          parse-body #(parse-body % widget l-binds back channels impl)
           options (parse-body bd)]
       (when rm-back ((:unset-key impl) widget l-binds rm-back))
       (when back ((:set-key-once impl) widget l-binds back))
       ((:set-content impl) title-widget (if (string? title) title "[untitled]"))
       ((:remove-all-listeners impl) widget "select")
-      (when options
-        (doto widget
-          ((:set-items impl) (take-nth 2 options))
-          ((:select impl) (:pos nav))))
-      ((:render impl)))
-    (-> (assoc nav :pick (create-pick-fn widget hra channels cfg impl))
-        (dissoc :rm-back))))
+      (let [n (if options
+                (do ((:set-items impl) widget (map #(if (vector? %) (first %) %)
+                                                   (take-nth 2 options)))
+                    ((:select impl) widget (:pos nav))
+                    (nav-entry/set-last nav (count options)))
+                nav)]
+        ((:render impl))
+        (-> (assoc n :pick (create-pick-fn widget hra channels cfg impl))
+            (dissoc :rm-back))))))
 
 (def config-default
   {:keymap keymap/vi
@@ -155,7 +159,7 @@
          (a/reduce
           (fn [{last-op :last-op :as nav} op]
             (let [timestamp (.getTime (js/Date.))]
-              (-> (custom-i9n-op op nav other)
+              (-> (ext/custom-i9n-op op nav other)
                   (assoc-in [:history timestamp]
                             {:op op :nav (dissoc nav :history)
                              :next [] :prev [last-op]})
