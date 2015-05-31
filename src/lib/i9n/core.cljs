@@ -60,18 +60,9 @@
   [{:keys [action]} {{in :in} :channels}]
   (a/put! in [:hop action]))
 
-(def n-fn-arg-paths
-  {:state [:nav :state]
-   :in [:channels :in]
-   :nav [:nav] :put [:put]})
-
 (defmethod ext/custom-i9n-action :n-fn
-  [{:keys [action requested-args]} {:keys [handle-returned-action] :as more}]
-  (handle-returned-action
-   (action (reduce (fn [m req-arg]
-                     (assoc m req-arg
-                            (get-in more (n-fn-arg-paths req-arg))))
-                   {} requested-args))))
+  [{:keys [action requested-args]} {:keys [nav handle-returned-action] :as more}]
+  (handle-returned-action (action nav)))
 
 ;;; OPERATIONS
 
