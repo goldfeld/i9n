@@ -181,7 +181,9 @@
               root :x} (group-by #(if (and (vector? %) (= 2 (count %))) :x :xs)
                                  nav-entries)]
          (create-pane-impl (cons :root (first root))
-                           (nav-entry/create-nav (first root) entries)
+                           (merge
+                            (nav-entry/create-nav (first root) entries)
+                            (:nav cfg))
                            list (let [keymap (merge (:keymap config-default)
                                                     (:keybinds cfg))]
                                   (-> (merge config-default cfg)
