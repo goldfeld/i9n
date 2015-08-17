@@ -1,4 +1,4 @@
-(defproject i9n "0.2.14"
+(defproject i9n "0.2.15"
   :description "Fast declarative terminal (curses) UIs with cljs and nodejs."
   :url "https://github.com/goldfeld/i9n"
   :license {:name "Eclipse Public License"
